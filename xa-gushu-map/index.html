@@ -170,7 +170,8 @@
 
     /* 图表的容器尺寸 */
     #speciesChart {
-      height: 200px;
+      height: 150px; /* 调整图表高度 */
+      width: 100%;   /* 让图表宽度自适应 */
     }
   </style>
 
@@ -244,7 +245,7 @@
     <div>
       <h2>📊 树种组成</h2>
       <div class="chart-card">
-        <canvas id="speciesChart" height="160"></canvas>
+        <canvas id="speciesChart" height="150"></canvas> <!-- 设置图表高度为150px -->
         <div class="legend">
           统计的是古树数量前若干的树种，其余合并为“其它树种”。颜色使用一组柔和的莫兰迪色。
         </div>
@@ -582,4 +583,3 @@
 </script>
 </body>
 </html>
-
