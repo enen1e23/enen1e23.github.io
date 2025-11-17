@@ -2,13 +2,15 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>西安市古树名木地图（OpenStreetMap 底图）</title>
+  <title>西安市古树名木地图</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- Leaflet 样式 -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
   />
 
   <style>
@@ -16,25 +18,47 @@
       height: 100%;
       margin: 0;
       padding: 0;
+    }
+    #container {
+      display: flex;
+      height: 100%;
+      width: 100%;
       font-family: "Microsoft YaHei", sans-serif;
     }
+    #sidebar {
+      width: 320px;
+      min-width: 260px;
+      max-width: 380px;
+      box-sizing: border-box;
+      padding: 10px 12px;
+      background: #f8f8f8;
+      border-right: 1px solid #ddd;
+      overflow-y: auto;
+    }
     #map {
-      width: 100%;
-      height: 100%;
+      flex: 1;
     }
-    .legend {
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      background: rgba(255,255,255,0.9);
-      padding: 8px 10px;
-      border-radius: 4px;
-      box-shadow: 0 0 4px rgba(0,0,0,0.3);
+    h1 {
+      font-size: 18px;
+      margin: 0 0 6px;
+    }
+    h2 {
+      font-size: 14px;
+      margin: 10px 0 4px;
+    }
+    p.small {
+      font-size: 11px;
+      color: #666;
+      margin: 0 0 8px;
+    }
+    #legend {
       font-size: 12px;
-      line-height: 1.6;
-      z-index: 1000;
+      margin-top: 10px;
     }
-    .legend span {
+    #legend div {
+      margin-bottom: 2px;
+    }
+    #legend span {
       display: inline-block;
       width: 10px;
       height: 10px;
@@ -42,117 +66,159 @@
       margin-right: 4px;
       vertical-align: middle;
     }
-    .info-popup {
-      font-size: 12px;
-      line-height: 1.6;
-      max-width: 260px;
-    }
-    .info-popup b {
-      font-size: 14px;
-    }
   </style>
 </head>
 <body>
+<div id="container">
+  <!-- 左侧：统计侧边栏 -->
+  <div id="sidebar">
+    <h1>西安市古树名木</h1>
+    <p class="small">右侧为古树空间分布，下面为按“中文名”汇总的树种占比（前 10 种）。</p>
 
-<div id="map"></div>
+    <h2>树种占比（前 10 种 + 其它）</h2>
+    <canvas id="speciesChart" width="280" height="260"></canvas>
 
-<div class="legend">
-  <div><span style="background:#d73027;"></span> 一级古树</div>
-  <div><span style="background:#fc8d59;"></span> 二级古树</div>
-  <div><span style="background:#91cf60;"></span> 三级古树</div>
+    <div id="legend">
+      <h2 style="margin-top: 12px;">等级图例</h2>
+      <div><span style="background:#d73027;"></span> 一级古树</div>
+      <div><span style="background:#fc8d59;"></span> 二级古树</div>
+      <div><span style="background:#91cf60;"></span> 三级古树</div>
+    </div>
+  </div>
+
+  <!-- 右侧：地图 -->
+  <div id="map"></div>
 </div>
 
 <!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- 古树数据（Python 生成的 JS 文件） -->
+<script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+  crossorigin=""
+></script>
+
+<!-- 图表库：Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- 古树数据：Python 脚本生成的 XA_GUSHU 变量 -->
 <script src="xa_gushu.js"></script>
 
 <script>
-  // 1. 初始化地图：中心设在西安
-  console.log("开始初始化地图");
+  // ===== 1. 安全检查：是否加载到数据 =====
+  if (typeof XA_GUSHU === "undefined") {
+    alert("未找到 XA_GUSHU 数据，请确认 xa_gushu.js 与本文件在同一文件夹。");
+  }
+
+  // ===== 2. 初始化 Leaflet 地图 =====
   var map = L.map('map').setView([34.27, 108.95], 11);
 
-  // 2. OSM 底图
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
+    attribution: '&copy; OpenStreetMap'
   }).addTo(map);
 
-  console.log("底图图层已添加");
+  // 等级 → 颜色
+  function levelColor(level) {
+    if (!level) return "#3388ff";
+    if (level.indexOf("一") !== -1) return "#d73027";   // 一级：红
+    if (level.indexOf("二") !== -1) return "#fc8d59";   // 二级：橙
+    return "#91cf60";                                  // 三级及其它：绿
+  }
 
-  // 3. 检查 XA_GUSHU 是否加载成功
-  if (typeof XA_GUSHU === "undefined") {
-    alert("未找到 XA_GUSHU 数据，请确认 xa_gushu.js 与 index.html 在同一文件夹，并且文件名一致。");
-    console.error("XA_GUSHU 未定义");
-  } else {
-    console.log("古树记录数：", XA_GUSHU.length);
+  var markerGroup = L.featureGroup().addTo(map);
+  var speciesCount = {};   // 统计用：{树种: 数量}
 
-    // 根据等级返回不同颜色
-    function levelColor(level) {
-      if (!level) return "#3388ff";
-      if (String(level).indexOf("一") !== -1) return "#d73027";   // 一级：红
-      if (String(level).indexOf("二") !== -1) return "#fc8d59";   // 二级：橙
-      return "#91cf60";                                           // 三级及其他：绿
-    }
-
-    var markers = [];
-    XA_GUSHU.forEach(function(t, i) {
-      if (!t.lng || !t.lat) {
-        return;  // 没有坐标的就跳过
-      }
+  // ===== 3. 画点 + 收集统计数据 =====
+  if (Array.isArray(XA_GUSHU)) {
+    XA_GUSHU.forEach(function(t) {
+      if (!t.lng || !t.lat) return;
 
       var lng = Number(t.lng);
       var lat = Number(t.lat);
       if (!isFinite(lng) || !isFinite(lat)) return;
 
-      var pos = [lat, lng]; // Leaflet 使用 [纬度, 经度]
       var color = levelColor(t.level);
 
-      // 半径稍微区分一下：老一点的大一点（粗略按树龄）
-      var r = 5;
-      if (t.age) {
-        var ageStr = String(t.age);
-        // 如果是类似 "500年以上"、"300-499年"，只粗略判断数量级
-        if (ageStr.indexOf("500") !== -1 || ageStr.indexOf("1300") !== -1 || ageStr.indexOf("1200") !== -1 || ageStr.indexOf("800") !== -1) {
-          r = 8;
-        } else if (ageStr.indexOf("300") !== -1 || ageStr.indexOf("400") !== -1 || ageStr.indexOf("371") !== -1) {
-          r = 6.5;
-        }
-      }
-
-      var marker = L.circleMarker(pos, {
-        radius: r,
+      var marker = L.circleMarker([lat, lng], {
+        radius: 5,
         color: "#ffffff",
         weight: 1,
         fillColor: color,
         fillOpacity: 0.9
-      }).addTo(map);
+      }).addTo(markerGroup);
 
-      // 信息窗内容
-      var html =
-        '<div class="info-popup">' +
-        '<b>' + (t.name || "") + (t.alias ? "（" + t.alias + "）" : "") + '</b><br/>' +
-        '古树编号：' + (t.id || "") + '<br/>' +
-        '树龄：' + (t.age || "") + '<br/>' +
-        '等级：' + (t.level || "") + '<br/>' +
-        '位置：' + (t.address || "") + '<br/>' +
-        '管护单位：' + (t.manager || "") + '<br/>' +
-        '管护责任人：' + (t.manager_person || "") + '<br/>' +
-        '文保单位内：' + (t.in_heritage || "") +
-        '</div>';
+      var name  = t.name  || "";
+      var alias = t.alias || "";
 
-      marker.bindPopup(html);
-      markers.push(marker);
+      var popupHtml =
+        "<b>" + (name || "") + (alias ? "（" + alias + "）" : "") + "</b><br/>" +
+        "古树编号：" + (t.id || "") + "<br/>" +
+        "树龄：" + (t.age || "") + "<br/>" +
+        "等级：" + (t.level || "") + "<br/>" +
+        "位置：" + (t.address || "") + "<br/>" +
+        "管护单位：" + (t.manager || "") + "<br/>" +
+        "管护责任人：" + (t.manager_person || "") + "<br/>" +
+        "文保单位内：" + (t.in_heritage || "");
+
+      marker.bindPopup(popupHtml);
+
+      // --- 统计树种数量（按“中文名”） ---
+      var key = name || "未命名树种";
+      speciesCount[key] = (speciesCount[key] || 0) + 1;
     });
 
-    // 如果有点，就自适应视野
-    if (markers.length > 0) {
-      var group = L.featureGroup(markers);
-      map.fitBounds(group.getBounds().pad(0.1));
-    } else {
-      console.warn("没有任何带坐标的古树点");
+    if (markerGroup.getLayers().length > 0) {
+      map.fitBounds(markerGroup.getBounds(), { padding: [20, 20] });
     }
   }
+
+  // ===== 4. 用 Chart.js 画树种占比饼图 =====
+  var entries = Object.entries(speciesCount);   // [ [name, count], ... ]
+  entries.sort(function(a, b) { return b[1] - a[1]; });  // 按数量降序
+
+  // 取前 10 个，其余合并为“其它树种”
+  var top = entries.slice(0, 10);
+  var otherTotal = entries.slice(10).reduce(function(sum, e) {
+    return sum + e[1];
+  }, 0);
+  if (otherTotal > 0) {
+    top.push(["其它树种", otherTotal]);
+  }
+
+  var labels = top.map(function(e) { return e[0]; });
+  var data = top.map(function(e) { return e[1]; });
+
+  var ctx = document.getElementById("speciesChart").getContext("2d");
+
+  // 配一组偏“古树 Morandi”风格的颜色，可随时替换
+  var colors = [
+    "#b35a4a", "#f3e0c9", "#c98a7d", "#efcf7a",
+    "#7c3f58", "#8b9a5b", "#d49c73", "#a3b18a",
+    "#c97b84", "#6c757d", "#e0e0e0"
+  ];
+
+  new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels: labels,
+      datasets: [{
+        data: data,
+        backgroundColor: colors.slice(0, labels.length)
+      }]
+    },
+    options: {
+      plugins: {
+        legend: {
+          display: true,
+          position: "bottom",
+          labels: {
+            font: { size: 11 }
+          }
+        }
+      }
+    }
+  });
 </script>
 </body>
 </html>
+
