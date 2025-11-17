@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8" />
   <title>西安市古树名木互动地图</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <!-- Leaflet CSS -->
+  <!-- Leaflet 样式 -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -18,378 +18,567 @@
       margin: 0;
       padding: 0;
       height: 100%;
-      font-family: "Microsoft YaHei", "SimHei", system-ui, sans-serif;
-      background-color: #f7f7f5;
+      font-family: "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f6f4f1;
     }
-
-    #app {
+    .layout {
       display: flex;
-      flex-direction: row;
-      height: 100%;
-      width: 100%;
+      height: 100vh;
+      overflow: hidden;
     }
-
-    #map {
-      flex: 1 1 auto;
-      height: 100%;
-    }
-
-    #sidebar {
-      width: 360px;
+    .sidebar {
+      width: 340px;
       max-width: 100%;
-      background-color: #fcfbf8;
-      border-left: 1px solid #e0ddd5;
-      box-shadow: -3px 0 8px rgba(0, 0, 0, 0.06);
-      padding: 16px 18px;
       box-sizing: border-box;
+      padding: 16px 18px;
+      background: #f9f6f1;
+      border-right: 1px solid #e0d6c8;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
       overflow-y: auto;
     }
-
-    #sidebar h1 {
+    .sidebar h1 {
       font-size: 20px;
-      margin: 0 0 6px 0;
+      margin: 0 0 6px;
+      font-weight: 600;
+      color: #5a3d32;
     }
-
-    #sidebar .subtitle {
-      font-size: 12px;
-      color: #777;
-      margin-bottom: 10px;
-    }
-
-    #sidebar .section-title {
+    .sidebar h2 {
       font-size: 14px;
-      margin-top: 14px;
-      margin-bottom: 6px;
-      font-weight: bold;
+      margin: 12px 0 4px;
+      font-weight: 600;
+      color: #5a3d32;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .sidebar p {
+      margin: 0;
+      font-size: 12px;
+      color: #666;
+      line-height: 1.6;
+    }
+    .tag {
+      display: inline-block;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: #e7d6c6;
+      color: #5a3d32;
+      margin-right: 4px;
+    }
+    #map {
+      flex: 1;
+      height: 100vh;
     }
 
-    #sidebar p {
+    input[type="text"],
+    input[type="range"],
+    select {
+      font-family: inherit;
+    }
+
+    #searchBox {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #d0c4b3;
       font-size: 12px;
-      margin: 3px 0;
-      line-height: 1.6;
+      box-sizing: border-box;
+      outline: none;
+    }
+    #searchBox:focus {
+      border-color: #7aa28f;
+      box-shadow: 0 0 0 1px rgba(122,162,143,0.25);
+    }
+
+    .small-text {
+      font-size: 11px;
+      color: #777;
+    }
+
+    /* 时间轴按钮 */
+    #timeline {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 4px;
+    }
+    .timeline-btn {
+      padding: 3px 8px;
+      background: #eee3da;
+      border-radius: 999px;
+      font-size: 11px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      user-select: none;
+    }
+    .timeline-btn:hover {
+      background: #e0d0c2;
+    }
+    .timeline-btn.active {
+      background: #7aa28f;
+      color: #fff;
+      border-color: #5d8572;
+    }
+
+    /* 统计图容器 */
+    .chart-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 8px 10px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+      border: 1px solid #e5ddd2;
     }
 
     .legend {
-      font-size: 12px;
-      margin-top: 6px;
-      margin-bottom: 4px;
-    }
-
-    .legend-item {
-      display: flex;
-      align-items: center;
-      margin-bottom: 2px;
-    }
-
-    .legend-color {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      margin-right: 4px;
-      border: 1px solid #eee;
-    }
-
-    #chart-container {
-      margin-top: 10px;
-      padding: 8px 10px;
-      border-radius: 8px;
-      background-color: #f4f2ec;
-      border: 1px solid #e4dfd4;
-    }
-
-    #speciesChart {
-      width: 100%;
-      height: 260px;
-    }
-
-    .note {
       font-size: 11px;
-      color: #888;
-      margin-top: 6px;
+      color: #666;
+      margin-top: 4px;
     }
 
-    /* 信息框样式 */
-    .info-window {
-      font-size: 12px;
-      line-height: 1.6;
+    .footer-note {
+      margin-top: 8px;
+      font-size: 11px;
+      color: #a18c7a;
     }
-    .info-window b {
-      font-size: 14px;
+
+    /* Leaflet infoWindow 默认字体变小一点 */
+    .leaflet-popup-content {
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .leaflet-popup-content b {
+      font-size: 13px;
     }
 
     @media (max-width: 768px) {
-      #app {
+      .layout {
         flex-direction: column;
       }
-      #map {
-        height: 50%;
-      }
-      #sidebar {
+      .sidebar {
         width: 100%;
-        height: 50%;
-        border-left: none;
-        border-top: 1px solid #e0ddd5;
+        height: 50vh;
+        border-right: none;
+        border-bottom: 1px solid #e0d6c8;
+      }
+      #map {
+        height: 50vh;
       }
     }
+
+    /* 图表的容器尺寸 */
+    #speciesChart {
+      height: 200px;
+    }
   </style>
+
+  <!-- 引入 Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <!-- 引入 Chart.js，用于树种统计图 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- 古树数据：var XA_GUSHU = [...] -->
+  <script src="xa_gushu.js"></script>
 </head>
 <body>
-<div id="app">
-  <div id="map"></div>
-
-  <div id="sidebar">
-    <h1>西安市古树名木地图</h1>
-    <div class="subtitle">市树是国槐，果然是分布最多的古树。</div>
-
-    <div class="section-title">图例（按古树等级）</div>
-    <div class="legend">
-      <div class="legend-item">
-        <span class="legend-color" style="background:#C26161;"></span>
-        一级古树
-      </div>
-      <div class="legend-item">
-        <span class="legend-color" style="background:#D9CC66;"></span>
-        二级古树
-      </div>
-      <div class="legend-item">
-        <span class="legend-color" style="background:#79C26D;"></span>
-        三级古树
+<div class="layout">
+  <!-- ===== 左侧控制栏 ===== -->
+  <aside class="sidebar">
+    <div>
+      <h1>西安市古树名木</h1>
+      <p class="small-text">
+        数据来源：西安市城市古树名木清单（坐标系：WGS84，对接 OpenStreetMap）。<br/>
+      </p>
+      <div style="margin-top:4px;">
+        <span class="tag">市树：国槐</span>
+        <span class="tag" id="treeCountTag">共 0 株</span>
       </div>
     </div>
 
-    <div class="section-title">树种组成（前 10 类 + 其他）</div>
-    <div id="chart-container">
-      <canvas id="speciesChart"></canvas>
-      <div class="note">
-        数据来源：西安市城市古树名木清单。统计口径与 Python 版本图一致：
-        取前 10 个树种单列，其余合并为“其他树种”。
+    <!-- 搜索 -->
+    <div>
+      <h2>🔍 搜索古树</h2>
+      <input
+        id="searchBox"
+        type="text"
+        placeholder="按树种、位置、管护单位等关键字搜索，如：国槐 / 大慈恩寺 / 莲湖"
+      />
+      <p class="small-text" style="margin-top:4px;">
+        支持模糊搜索：树种名 + 管护单位 + 地址 + 俗名。
+      </p>
+    </div>
+
+    <!-- 树龄筛选 -->
+    <div>
+      <h2>🌱 按树龄筛选</h2>
+      <div class="small-text" style="margin-bottom:4px;">
+        当前范围：<span id="ageMinLabel">0</span> 年 ～ <span id="ageMaxLabel">1000</span> 年
+      </div>
+      <input type="range" id="ageMin" min="0" max="1000" value="0" />
+      <input type="range" id="ageMax" min="0" max="1000" value="1000" style="margin-top:4px;" />
+      <p class="small-text" style="margin-top:4px;">
+        少数记录为“300–499 年”“500年以上”，已转换为近似数值参与筛选。
+      </p>
+    </div>
+
+    <!-- 时间轴 -->
+    <div>
+      <h2>⏳ 年代时间轴</h2>
+      <div id="timeline">
+        <div class="timeline-btn" data-range="0-200">0–200 年</div>
+        <div class="timeline-btn" data-range="200-300">200–300 年</div>
+        <div class="timeline-btn" data-range="300-500">300–500 年</div>
+        <div class="timeline-btn" data-range="500-9999">500 年以上</div>
+        <div class="timeline-btn" data-range="0-9999">全部</div>
       </div>
     </div>
 
-    <div class="section-title">使用说明</div>
-    <p>① 在地图上缩放、拖动，查看各区古树分布。</p>
-    <p>② 点击圆点，可查看古树编号、树龄、等级、具体位置等信息。</p>
-    <p>③ 右侧统计图展示树种占比结构，可直观看到“谁最多”。</p>
-  </div>
+    <!-- 树种统计图 -->
+    <div>
+      <h2>📊 树种组成</h2>
+      <div class="chart-card">
+        <canvas id="speciesChart" height="160"></canvas>
+        <div class="legend">
+          统计的是古树数量前若干的树种，其余合并为“其它树种”。颜色使用一组柔和的莫兰迪色。
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      💡 小贴士：支持缩放、拖动地图；点击圆点可查看每一株古树详情。
+    </div>
+  </aside>
+
+  <!-- ===== 右侧地图 ===== -->
+  <main id="map"></main>
 </div>
 
-<!-- Leaflet JS -->
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""
-></script>
-
-<!-- Chart.js，用来画树种组成图 -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- 古树点数据：由 Python 生成的 XA_GUSHU -->
-<script src="xa_gushu.js"></script>
-
 <script>
-  console.log("JS 正常运行");
+  // ===================== 工具函数：解析树龄字符串 =====================
+  function parseAgeToNumber(ageStr) {
+    if (!ageStr) return NaN;
+    const s = String(ageStr).trim();
 
-  // 1. 初始化地图（OpenStreetMap 底图）
-  var map = L.map('map').setView([34.27, 108.95], 11);
+    // 纯数字
+    if (/^\d+$/.test(s)) return parseInt(s, 10);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> 贡献者'
-  }).addTo(map);
+    // 含“年以上”
+    const m1 = s.match(/(\d+)\s*年以上/);
+    if (m1) return parseInt(m1[1], 10);
 
-  // 2. 颜色映射：沿用 Morandi 系列
-  function levelColor(level) {
-    if (!level) return "#5C3D4C";      // 默认深紫红
-    if (level.indexOf("一") !== -1) return "#C26161"; // 一级：暖红
-    if (level.indexOf("二") !== -1) return "#D9CC66"; // 二级：土黄
-    return "#79C26D";                                  // 三级及其他：浅绿
+    // “300-499年” 取区间中值
+    const m2 = s.match(/(\d+)\s*[-~～]\s*(\d+)/);
+    if (m2) {
+      const a = parseInt(m2[1], 10);
+      const b = parseInt(m2[2], 10);
+      return Math.round((a + b) / 2);
+    }
+
+    // 结尾有“年”
+    const m3 = s.match(/(\d+)\s*年/);
+    if (m3) return parseInt(m3[1], 10);
+
+    return NaN;
   }
 
-  // 3. 地图上画古树点，并收集所有坐标
-  var markerLayer = L.layerGroup().addTo(map);
-  var allLatLngs = [];
+  // ===================== Leaflet 初始化 =====================
+  const map = L.map("map").setView([34.27, 108.95], 11);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap 贡献者'
+  }).addTo(map);
+
+  // ===================== 渲染古树点 =====================
+  const allMarkers = [];
+  const speciesCount = {};
+  let globalMinAge = Infinity;
+  let globalMaxAge = -Infinity;
+
+  function levelColor(level) {
+    if (!level) return "#7aa28f";
+    if (level.indexOf("一") !== -1) return "#b6543f"; // 一级
+    if (level.indexOf("二") !== -1) return "#c7796b"; // 二级
+    return "#8ca66b";                                // 三级/其它
+  }
 
   if (typeof XA_GUSHU === "undefined") {
-    alert("未找到 XA_GUSHU 数据，请确认 xa_gushu.js 与本文件在同一文件夹。");
+    alert("未找到 XA_GUSHU，请检查 xa_gushu.js 是否在同一目录。");
   } else {
-    XA_GUSHU.forEach(function(t) {
-      if (!t.lng || !t.lat) return;
+    XA_GUSHU.forEach(tree => {
+      const lng = parseFloat(tree.lng);
+      const lat = parseFloat(tree.lat);
+      if (!isFinite(lng) || !isFinite(lat)) return;
 
-      var lat = Number(t.lat);
-      var lng = Number(t.lng);
-      if (isNaN(lat) || isNaN(lng)) return;
+      const ageNum = parseAgeToNumber(tree.age);
+      if (isFinite(ageNum)) {
+        globalMinAge = Math.min(globalMinAge, ageNum);
+        globalMaxAge = Math.max(globalMaxAge, ageNum);
+      }
 
-      var color = levelColor(String(t.level || ""));
+      const pos = [lat, lng];
+      const color = levelColor(tree.level);
 
-      var marker = L.circleMarker([lat, lng], {
-        radius: 5,
+      const marker = L.circleMarker(pos, {
+        radius: 4,
         color: "#ffffff",
-        weight: 1,
+        weight: 0.8,
         fillColor: color,
         fillOpacity: 0.9
-      }).addTo(markerLayer);
+      }).addTo(map);
 
-      var popupHtml = `
-        <div class="info-window">
-          <b>${t.name || ""}${t.alias ? "（" + t.alias + "）" : ""}</b><br/>
-          古树编号：${t.id || ""}<br/>
-          树龄：${t.age || ""}<br/>
-          等级：${t.level || ""}<br/>
-          位置：${t.address || ""}<br/>
-          管护单位：${t.manager || ""}<br/>
-          管护责任人：${t.manager_person || ""}<br/>
-          文保单位内：${t.in_heritage || ""}
+      // 保存原始数据到 marker
+      marker._treeData = {
+        ...tree,
+        ageNum
+      };
+
+      const popupHtml = ` 
+        <div>
+          <b>${tree.name || ""} ${tree.alias ? "（" + tree.alias + "）" : ""}</b><br/>
+          古树编号：${tree.id || ""}<br/>
+          树龄：${tree.age || ""}<br/>
+          等级：${tree.level || ""}<br/>
+          位置：${tree.address || ""}<br/>
+          管护单位：${tree.manager || ""}<br/>
+          管护责任人：${tree.manager_person || ""}<br/>
+          文物保护单位内：${tree.in_heritage || ""}
         </div>
       `;
       marker.bindPopup(popupHtml);
 
-      allLatLngs.push([lat, lng]);
+      allMarkers.push(marker);
+
+      // 统计树种
+      const sp = tree.name || "未注明";
+      speciesCount[sp] = (speciesCount[sp] || 0) + 1;
     });
 
-    if (allLatLngs.length > 0) {
-      var bounds = L.latLngBounds(allLatLngs);
-      map.fitBounds(bounds.pad(0.1));
-    }
-  }
-
-  // 4. 树种组成统计（逻辑与 Python 版本一致：前 10 + “其他树种”）
-  function buildSpeciesStats(trees, topN) {
-    var counts = {};  // {树种: 数量}
-
-    trees.forEach(function(t) {
-      var name = (t.name || "").trim();
-      if (!name) return;
-      if (!counts[name]) counts[name] = 0;
-      counts[name] += 1;
-    });
-
-    var entries = Object.keys(counts).map(function(name) {
-      return { name: name, count: counts[name] };
-    });
-
-    // 按数量从大到小排序
-    entries.sort(function(a, b) {
-      return b.count - a.count;
-    });
-
-    var total = entries.reduce(function(sum, e) {
-      return sum + e.count;
-    }, 0);
-
-    var selected = entries.slice(0, topN);
-    if (entries.length > topN) {
-      var othersCount = entries.slice(topN).reduce(function(sum, e) {
-        return sum + e.count;
-      }, 0);
-      selected.push({ name: "其他树种", count: othersCount });
+    if (allMarkers.length > 0) {
+      map.fitBounds(L.featureGroup(allMarkers).getBounds(), {
+        padding: [40, 40]
+      });
     }
 
-    // 计算百分比
-    selected.forEach(function(e) {
-      e.percent = total > 0 ? (e.count / total * 100) : 0;
-    });
-
-    // 从小到大排序，方便画横向条形图
-    selected.sort(function(a, b) {
-      return a.percent - b.percent;
-    });
-
-    return {
-      total: total,
-      data: selected
-    };
+    // 显示总数
+    const tag = document.getElementById("treeCountTag");
+    if (tag) tag.textContent = `共 ${allMarkers.length} 株`;
   }
 
-  var stats = buildSpeciesStats(
-    (typeof XA_GUSHU !== "undefined" ? XA_GUSHU : []),
-    10 // 前 10
-  );
+  // ===================== 初始化树龄滑块 =====================
+  const ageMinSlider = document.getElementById("ageMin");
+  const ageMaxSlider = document.getElementById("ageMax");
+  const ageMinLabel  = document.getElementById("ageMinLabel");
+  const ageMaxLabel  = document.getElementById("ageMaxLabel");
 
-  console.log("树种组成统计：", stats);
+  if (!isFinite(globalMinAge)) { globalMinAge = 0; }
+  if (!isFinite(globalMaxAge)) { globalMaxAge = 1000; }
 
-  // 5. 用 Chart.js 画横向条形图
-  var ctx = document.getElementById('speciesChart').getContext('2d');
+  // 给一点冗余
+  const sliderMin = Math.max(0, Math.floor(globalMinAge / 50) * 50);
+  const sliderMax = Math.ceil(globalMaxAge / 50) * 50;
 
-  var labels = stats.data.map(function(e) { return e.name; });
-  var percents = stats.data.map(function(e) { return Number(e.percent.toFixed(1)); });
+  ageMinSlider.min = sliderMin;
+  ageMinSlider.max = sliderMax;
+  ageMaxSlider.min = sliderMin;
+  ageMaxSlider.max = sliderMax;
 
-  // Morandi 配色
-  var palette = [
-    "#C26161",  // 暖红
-    "#E6E6D9",  // 米白
-    "#5C3D4C",  // 深紫红
-    "#79C26D",  // 浅绿
-    "#CCA6BF",  // 粉紫
-    "#D9CC66",  // 土黄
-    "#CE6D9D",  // 玫粉
-    "#5CAC45",  // 深绿
+  ageMinSlider.value = sliderMin;
+  ageMaxSlider.value = sliderMax;
+
+  ageMinLabel.textContent = sliderMin;
+  ageMaxLabel.textContent = sliderMax;
+
+  let currentSearchKW = "";
+  let currentAgeMin = sliderMin;
+  let currentAgeMax = sliderMax;
+
+  // ===================== 统一过滤函数（搜索 + 树龄 + 时间轴） =====================
+  function applyFilters() {
+    const kw = currentSearchKW.trim().toLowerCase();
+
+    allMarkers.forEach(marker => {
+      const t = marker._treeData;
+      const age = t.ageNum;
+      let visible = true;
+
+      // 搜索匹配
+      if (kw) {
+        const text = (t.name + " " + (t.alias || "") + " " +
+                      (t.address || "") + " " +
+                      (t.manager || "")).toLowerCase();
+        if (!text.includes(kw)) visible = false;
+      }
+
+      // 树龄范围
+      if (visible && isFinite(age)) {
+        if (age < currentAgeMin || age > currentAgeMax) visible = false;
+      }
+      // 没有年龄数据的，如果开启了范围筛选，则弱化显示
+      if (visible && !isFinite(age) &&
+          (currentAgeMin > sliderMin || currentAgeMax < sliderMax)) {
+        visible = false;
+      }
+
+      if (visible) {
+        marker.setStyle({
+          fillOpacity: 0.9,
+          opacity: 1,
+          radius: 4
+        });
+      } else {
+        marker.setStyle({
+          fillOpacity: 0.05,
+          opacity: 0.1,
+          radius: 3
+        });
+      }
+    });
+  }
+
+  // ===================== 搜索框事件 =====================
+  const searchBox = document.getElementById("searchBox");
+  searchBox.addEventListener("input", function () {
+    currentSearchKW = this.value;
+    applyFilters();
+  });
+
+  // ===================== 树龄滑块事件 =====================
+  function onAgeSliderChange() {
+    let vMin = parseInt(ageMinSlider.value, 10);
+    let vMax = parseInt(ageMaxSlider.value, 10);
+
+    // 保证最小值不超过最大值
+    if (vMin > vMax) {
+      const tmp = vMin;
+      vMin = vMax;
+      vMax = tmp;
+    }
+
+    currentAgeMin = vMin;
+    currentAgeMax = vMax;
+    ageMinLabel.textContent = vMin;
+    ageMaxLabel.textContent = vMax;
+
+    // 取消时间轴的高亮
+    document.querySelectorAll(".timeline-btn").forEach(btn => {
+      if (btn.dataset.range !== "0-9999") btn.classList.remove("active");
+    });
+
+    applyFilters();
+  }
+
+  ageMinSlider.addEventListener("input", onAgeSliderChange);
+  ageMaxSlider.addEventListener("input", onAgeSliderChange);
+
+  // ===================== 时间轴按钮事件 =====================
+  document.querySelectorAll(".timeline-btn").forEach(btn => {
+    btn.addEventListener("click", function () {
+      // 按钮高亮
+      document.querySelectorAll(".timeline-btn").forEach(b => b.classList.remove("active"));
+      this.classList.add("active");
+
+      const [minStr, maxStr] = this.dataset.range.split("-");
+      const minAge = parseInt(minStr, 10);
+      const maxAge = parseInt(maxStr, 10);
+
+      currentAgeMin = minAge;
+      currentAgeMax = maxAge;
+
+      // 同步滑块 & 标签
+      ageMinSlider.value = minAge;
+      ageMaxSlider.value = maxAge;
+      ageMinLabel.textContent = minAge;
+      ageMaxLabel.textContent = maxAge;
+
+      applyFilters();
+    });
+  });
+
+  // ===================== 树种统计图（Chart.js） =====================
+  const speciesEntries = Object.entries(speciesCount).sort((a, b) => b[1] - a[1]);
+
+  const topN = 8;
+  const labels = [];
+  const data = [];
+  let others = 0;
+  speciesEntries.forEach((item, idx) => {
+    if (idx < topN) {
+      labels.push(item[0]);
+      data.push(item[1]);
+    } else {
+      others += item[1];
+    }
+  });
+  if (others > 0) {
+    labels.push("其它树种");
+    data.push(others);
+  }
+
+  const ctx = document.getElementById("speciesChart").getContext("2d");
+
+  // 来自你给的配色（大致转成 HEX）
+  const morandiColors = [
+    "#b6543f", // C20 M60 Y60 K5
+    "#f3e9dd", // C10 M10 Y15 K0
+    "#c27d7d", // C20 M35 Y25 K0
+    "#f0d188", // C15 M20 Y60 K0
+    "#6c2b33", // C40 M60 Y50 K40
+    "#6b7c46", // C50 M20 Y55 K5
+    "#a37f3e"  // C60 M25 Y70 K10
   ];
-  var colors = [];
-  for (var i = 0; i < labels.length; i++) {
-    colors.push(palette[i % palette.length]);
-  }
 
-  var speciesChart = new Chart(ctx, {
-    type: 'bar',
+  new Chart(ctx, {
+    type: "bar",
     data: {
       labels: labels,
       datasets: [{
-        label: '占比 (%)',
-        data: percents,
-        backgroundColor: colors,
+        label: "古树数量（株）",
+        data: data,
+        backgroundColor: labels.map((_, i) => morandiColors[i % morandiColors.length]),
         borderWidth: 0
       }]
     },
     options: {
-      indexAxis: 'y', // 横向条形图
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: {
-          display: false
-        },
+        legend: { display: false },
         tooltip: {
           callbacks: {
             label: function(context) {
-              var idx = context.dataIndex;
-              var e = stats.data[idx];
-              return e.name + "："
-                     + e.count + " 株，"
-                     + e.percent.toFixed(1) + "%";
+              return `${context.parsed.y} 株`;
             }
           }
-        },
-        title: {
-          display: false
         }
       },
       scales: {
         x: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: "占比（%）"
-          },
-          grid: {
-            drawBorder: false,
-            color: "rgba(0,0,0,0.08)",
-            borderDash: [4, 4]
-          }
+          ticks: { font: { size: 11 } }
         },
         y: {
-          ticks: {
-            autoSkip: false,
-            font: {
-              size: 11
-            }
+          beginAtZero: true,
+          ticks: { font: { size: 11 } },
+          title: {
+            display: true,
+            text: "株数",
+            font: { size: 11 }
           },
-          grid: {
-            display: false
-          }
+          grid: { color: "#eee" }
         }
       }
     }
   });
+
+  // 初始化一次过滤（保证样式统一）
+  applyFilters();
 </script>
 </body>
 </html>
