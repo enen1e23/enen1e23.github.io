@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>西安市古树名木地图（OpenStreetMap 底图）</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Leaflet 样式 -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+    }
+    .legend {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255,255,255,0.9);
+      padding: 8px 10px;
+      border-radius: 4px;
+      box-shadow: 0 0 4px rgba(0,0,0,0.3);
+      font-size: 12px;
+      line-height: 1.6;
+      z-index: 1000;
+    }
+    .legend span {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .info-popup {
+      font-size: 12px;
+      line-height: 1.6;
+      max-width: 260px;
+    }
+    .info-popup b {
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<div class="legend">
+  <div><span style="background:#d73027;"></span> 一级古树</div>
+  <div><span style="background:#fc8d59;"></span> 二级古树</div>
+  <div><span style="background:#91cf60;"></span> 三级古树</div>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- 古树数据（Python 生成的 JS 文件） -->
+<script src="xa_gushu.js"></script>
+
+<script>
+  // 1. 初始化地图：中心设在西安
+  console.log("开始初始化地图");
+  var map = L.map('map').setView([34.27, 108.95], 11);
+
+  // 2. OSM 底图
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  console.log("底图图层已添加");
+
+  // 3. 检查 XA_GUSHU 是否加载成功
+  if (typeof XA_GUSHU === "undefined") {
+    alert("未找到 XA_GUSHU 数据，请确认 xa_gushu.js 与 index.html 在同一文件夹，并且文件名一致。");
+    console.error("XA_GUSHU 未定义");
+  } else {
+    console.log("古树记录数：", XA_GUSHU.length);
+
+    // 根据等级返回不同颜色
+    function levelColor(level) {
+      if (!level) return "#3388ff";
+      if (String(level).indexOf("一") !== -1) return "#d73027";   // 一级：红
+      if (String(level).indexOf("二") !== -1) return "#fc8d59";   // 二级：橙
+      return "#91cf60";                                           // 三级及其他：绿
+    }
+
+    var markers = [];
+    XA_GUSHU.forEach(function(t, i) {
+      if (!t.lng || !t.lat) {
+        return;  // 没有坐标的就跳过
+      }
+
+      var lng = Number(t.lng);
+      var lat = Number(t.lat);
+      if (!isFinite(lng) || !isFinite(lat)) return;
+
+      var pos = [lat, lng]; // Leaflet 使用 [纬度, 经度]
+      var color = levelColor(t.level);
+
+      // 半径稍微区分一下：老一点的大一点（粗略按树龄）
+      var r = 5;
+      if (t.age) {
+        var ageStr = String(t.age);
+        // 如果是类似 "500年以上"、"300-499年"，只粗略判断数量级
+        if (ageStr.indexOf("500") !== -1 || ageStr.indexOf("1300") !== -1 || ageStr.indexOf("1200") !== -1 || ageStr.indexOf("800") !== -1) {
+          r = 8;
+        } else if (ageStr.indexOf("300") !== -1 || ageStr.indexOf("400") !== -1 || ageStr.indexOf("371") !== -1) {
+          r = 6.5;
+        }
+      }
+
+      var marker = L.circleMarker(pos, {
+        radius: r,
+        color: "#ffffff",
+        weight: 1,
+        fillColor: color,
+        fillOpacity: 0.9
+      }).addTo(map);
+
+      // 信息窗内容
+      var html =
+        '<div class="info-popup">' +
+        '<b>' + (t.name || "") + (t.alias ? "（" + t.alias + "）" : "") + '</b><br/>' +
+        '古树编号：' + (t.id || "") + '<br/>' +
+        '树龄：' + (t.age || "") + '<br/>' +
+        '等级：' + (t.level || "") + '<br/>' +
+        '位置：' + (t.address || "") + '<br/>' +
+        '管护单位：' + (t.manager || "") + '<br/>' +
+        '管护责任人：' + (t.manager_person || "") + '<br/>' +
+        '文保单位内：' + (t.in_heritage || "") +
+        '</div>';
+
+      marker.bindPopup(html);
+      markers.push(marker);
+    });
+
+    // 如果有点，就自适应视野
+    if (markers.length > 0) {
+      var group = L.featureGroup(markers);
+      map.fitBounds(group.getBounds().pad(0.1));
+    } else {
+      console.warn("没有任何带坐标的古树点");
+    }
+  }
+</script>
+</body>
+</html>
