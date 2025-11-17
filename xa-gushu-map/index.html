@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>西安市古树名木地图</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- Leaflet 样式 -->
   <link
@@ -14,376 +14,475 @@
   />
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
     html, body {
-      height: 100%;
       margin: 0;
       padding: 0;
-      font-family: "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f3f3f1;
-      color: #333;
+      height: 100%;
+      font-family: "Microsoft YaHei", "Segoe UI", Arial, sans-serif;
+      background-color: #f5f5f5;
     }
-    #container {
+
+    .app-container {
       display: flex;
       height: 100%;
       width: 100%;
     }
 
-    /* ===== 左侧面板 ===== */
-    #sidebar {
-      width: 340px;
-      min-width: 280px;
-      max-width: 400px;
-      padding: 14px 14px 16px;
-      background: linear-gradient(135deg, #f9f6f1, #f3f5f7);
-      border-right: 1px solid #ddd;
-      box-shadow: 2px 0 8px rgba(0,0,0,0.05);
+    /* 左侧信息栏 */
+    .sidebar {
+      width: 320px;
+      max-width: 360px;
+      background: #ffffff;
+      border-right: 1px solid #e0e0e0;
+      padding: 14px 16px;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
       gap: 10px;
+      box-shadow: 2px 0 6px rgba(0, 0, 0, 0.04);
     }
-    #header {
-      margin-bottom: 2px;
-    }
-    #title {
-      font-size: 20px;
-      font-weight: 600;
+
+    .sidebar h1 {
+      font-size: 18px;
       margin: 0 0 4px;
-      letter-spacing: 1px;
+      color: #333;
     }
-    #subtitle {
-      font-size: 12px;
-      color: #777;
-      margin: 0;
-    }
-
-    /* 小卡片区域 */
-    #stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0,1fr));
-      gap: 6px;
-      margin-top: 4px;
-    }
-    .stat-card {
-      background: #ffffff;
-      border-radius: 10px;
-      padding: 6px 8px 8px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
-    }
-    .stat-label {
-      font-size: 11px;
-      color: #888;
-      margin-bottom: 2px;
-    }
-    .stat-value {
-      font-size: 16px;
-      font-weight: 600;
-      color: #444;
-    }
-
-    /* 统计图卡片 */
-    #chart-card {
-      background: #ffffff;
-      border-radius: 12px;
-      padding: 10px 10px 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-    }
-    #chart-card h2 {
+    .sidebar h2 {
       font-size: 14px;
-      margin: 0 0 2px;
+      margin: 8px 0 4px;
+      color: #555;
     }
-    #chart-desc {
-      font-size: 11px;
-      color: #777;
-      margin: 0 0 6px;
-    }
-    #speciesChart {
-      width: 100%;
-      max-width: 310px;
-      height: 240px;
+    .sidebar p {
+      font-size: 12px;
+      margin: 0;
+      color: #666;
+      line-height: 1.6;
     }
 
-    /* 图例 */
-    #legend-card {
-      margin-top: 6px;
-      background: #ffffff;
-      border-radius: 12px;
+    .summary-box {
+      background: #fafafa;
+      border-radius: 6px;
       padding: 8px 10px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      border: 1px solid #eee;
       font-size: 12px;
+      color: #555;
     }
-    #legend-card h3 {
-      margin: 0 0 4px;
-      font-size: 13px;
+
+    /* 树种统计列表 */
+    .species-list {
+      margin: 4px 0 0;
+      padding: 0;
+      list-style: none;
+      max-height: 45vh;
+      overflow-y: auto;
+      border-radius: 4px;
+      border: 1px solid #f0f0f0;
+      background: #fcfcfc;
     }
-    #legend {
-      font-size: 12px;
-    }
-    #legend div {
-      margin-bottom: 2px;
+
+    .species-item {
       display: flex;
       align-items: center;
-      gap: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: background 0.15s;
     }
-    #legend span {
-      display: inline-block;
-      width: 11px;
-      height: 11px;
+
+    .species-item:nth-child(odd) {
+      background: #fafafa;
+    }
+
+    .species-item:hover {
+      background: #e8f3ff;
+    }
+
+    .species-color {
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
-      margin-right: 2px;
+      margin-right: 6px;
+      flex-shrink: 0;
     }
 
-    /* 底部小字 */
-    #footer {
-      margin-top: auto;
-      font-size: 10px;
+    .species-name {
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .species-count {
+      margin-left: 6px;
       color: #999;
-      text-align: left;
-      padding-top: 4px;
+      font-size: 11px;
     }
 
-    /* ===== 右侧地图 ===== */
+    .species-bar {
+      height: 6px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, #b1c5a4, #7aa28f);
+      margin-left: 6px;
+      flex-shrink: 0;
+    }
+
+    .legend-box {
+      margin-top: 4px;
+      font-size: 12px;
+    }
+    .legend-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 2px;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+
+    .hint {
+      font-size: 11px;
+      color: #888;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+
+    /* 地图区域 */
     #map {
       flex: 1;
-      position: relative;
-    }
-    #map .leaflet-container {
-      font-family: "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      height: 100%;
     }
 
-    /* 手机端稍微调整布局 */
-    @media (max-width: 768px) {
-      #container {
-        flex-direction: column;
-      }
-      #sidebar {
-        width: 100%;
-        max-width: 100%;
-        border-right: none;
-        border-bottom: 1px solid #ddd;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      }
+    /* 信息弹窗 */
+    .info-window {
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .info-window b {
+      font-size: 14px;
     }
   </style>
+
+  <!-- Leaflet 脚本 -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <!-- 古树数据（高德地理编码结果，GCJ-02） -->
+  <script src="xa_gushu.js"></script>
 </head>
 <body>
-<div id="container">
-  <!-- 左侧：信息 + 统计 -->
-  <div id="sidebar">
-    <div id="header">
-      <h1 id="title">西安市古树名木地图</h1>
-      <p id="subtitle">基于官方古树名录 + 自制可视化 · 浏览街区里的老树故事</p>
+<div class="app-container">
+  <div class="sidebar">
+    <h1>西安市古树名木地图</h1>
+    <p>基于西安市古树名木清单（地理编码自“位置”字段），底图使用 OpenStreetMap。</p>
 
-      <!-- 小统计卡片 -->
-      <div id="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">古树总数</div>
-          <div class="stat-value" id="stat-total">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">树种数量</div>
-          <div class="stat-value" id="stat-species">-</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">最老树龄</div>
-          <div class="stat-value" id="stat-max-age">-</div>
-        </div>
+    <div class="summary-box" id="summary-box">
+      载入数据中…
+    </div>
+
+    <h2>按树种统计（中文名）</h2>
+    <ul class="species-list" id="species-list"></ul>
+
+    <div class="legend-box">
+      <h2>图例 · 等级</h2>
+      <div class="legend-row">
+        <div class="legend-dot" style="background:#d73027;"></div> 一级古树
+      </div>
+      <div class="legend-row">
+        <div class="legend-dot" style="background:#fc8d59;"></div> 二级古树
+      </div>
+      <div class="legend-row">
+        <div class="legend-dot" style="background:#91cf60;"></div> 三级古树
       </div>
     </div>
 
-    <!-- 饼图卡片 -->
-    <div id="chart-card">
-      <h2>树种占比（按“中文名”，前 10 种 + 其它）</h2>
-      <p id="chart-desc">面积表示各树种在名录中的数量占比，可用来感受城市古树的“物种基调”。</p>
-      <canvas id="speciesChart"></canvas>
-    </div>
-
-    <!-- 等级图例 -->
-    <div id="legend-card">
-      <h3>树龄等级图例</h3>
-      <div id="legend">
-        <div><span style="background:#b85b4e;"></span> 一级古树</div>
-        <div><span style="background:#d08a6a;"></span> 二级古树</div>
-        <div><span style="background:#9cab7c;"></span> 三级古树</div>
-      </div>
-    </div>
-
-    <div id="footer">
-      数据：西安市城市古树名木清单（个人整理） · 可视化：Leaflet + Chart.js · 作者：@enen1e23
-    </div>
+    <p class="hint">
+      点击树种名称，可在地图中高亮该树种的古树点。再次点击可取消过滤，恢复全部显示。
+    </p>
   </div>
 
-  <!-- 右侧：地图 -->
   <div id="map"></div>
 </div>
 
-<!-- Leaflet JS -->
-<script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-  crossorigin=""
-></script>
-
-<!-- 图表库：Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- 古树数据：Python 脚本生成的 XA_GUSHU 变量 -->
-<script src="xa_gushu.js"></script>
-
 <script>
-  // ===== 0. 安全检查 =====
-  if (typeof XA_GUSHU === "undefined") {
-    alert("未找到 XA_GUSHU 数据，请确认 xa_gushu.js 与本文件在同一文件夹。");
+  // ============ GCJ-02 → WGS84 转换（JS 版） ============
+  const PI = Math.PI;
+  const a = 6378245.0;
+  const ee = 0.006693421622965943;
+
+  function outOfChina(lng, lat) {
+    return !(lng > 73.66 && lng < 135.05 && lat > 3.86 && lat < 53.55);
   }
 
-  // ===== 1. 初始化 Leaflet 地图 =====
-  var map = L.map('map').setView([34.27, 108.95], 11);
+  function transformLat(lng, lat) {
+    let ret = -100.0 + 2.0 * lng + 3.0 * lat + 0.2 * lat * lat
+            + 0.1 * lng * lat + 0.2 * Math.sqrt(Math.abs(lng));
+    ret += (20.0 * Math.sin(6.0 * lng * PI) + 20.0 * Math.sin(2.0 * lng * PI)) * 2.0 / 3.0;
+    ret += (20.0 * Math.sin(lat * PI) + 40.0 * Math.sin(lat / 3.0 * PI)) * 2.0 / 3.0;
+    ret += (160.0 * Math.sin(lat / 12.0 * PI) + 320 * Math.sin(lat * PI / 30.0)) * 2.0 / 3.0;
+    return ret;
+  }
+
+  function transformLng(lng, lat) {
+    let ret = 300.0 + lng + 2.0 * lat + 0.1 * lng * lng
+            + 0.1 * lng * lat + 0.1 * Math.sqrt(Math.abs(lng));
+    ret += (20.0 * Math.sin(6.0 * lng * PI) + 20.0 * Math.sin(2.0 * lng * PI)) * 2.0 / 3.0;
+    ret += (20.0 * Math.sin(lng * PI) + 40.0 * Math.sin(lng / 3.0 * PI)) * 2.0 / 3.0;
+    ret += (150.0 * Math.sin(lng / 12.0 * PI) + 300.0 * Math.sin(lng / 30.0 * PI)) * 2.0 / 3.0;
+    return ret;
+  }
+
+  // 输入：高德 GCJ-02 坐标 → 输出：WGS84
+  function gcj02ToWgs84(lng, lat) {
+    lng = Number(lng);
+    lat = Number(lat);
+    if (outOfChina(lng, lat)) {
+      return [lng, lat];
+    }
+    let dlat = transformLat(lng - 105.0, lat - 35.0);
+    let dlng = transformLng(lng - 105.0, lat - 35.0);
+    const radlat = lat / 180.0 * PI;
+    let magic = Math.sin(radlat);
+    magic = 1 - ee * magic * magic;
+    const sqrtMagic = Math.sqrt(magic);
+    dlat = (dlat * 180.0) / ((a * (1 - ee)) / (magic * sqrtMagic) * PI);
+    dlng = (dlng * 180.0) / (a / sqrtMagic * Math.cos(radlat) * PI);
+    const mgLat = lat + dlat;
+    const mgLng = lng + dlng;
+    return [lng - dlng, lat - dlat];
+  }
+
+  // ============ 地图初始化（Leaflet + OSM） ============
+  const map = L.map('map').setView([34.27, 108.95], 11);
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
-    attribution: '&copy; OpenStreetMap'
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/" target="_blank">OpenStreetMap</a> 贡献者 | 坐标：GCJ-02 → WGS84 近似转换'
   }).addTo(map);
 
+  // 等级 → 颜色
   function levelColor(level) {
     if (!level) return "#3388ff";
-    if (level.indexOf("一") !== -1) return "#b85b4e";   // Morandi 暖红
-    if (level.indexOf("二") !== -1) return "#d08a6a";   // 暖橙
-    return "#9cab7c";                                   // 暖绿
+    if (String(level).indexOf("一") !== -1) return "#d73027"; // 一级
+    if (String(level).indexOf("二") !== -1) return "#fc8d59"; // 二级
+    return "#91cf60";                                       // 三级/其它
   }
 
-  var markerGroup   = L.featureGroup().addTo(map);
-  var speciesCount  = {};   // {树种: 数量}
-  var maxAge        = 0;
-  var totalCount    = 0;
+  const allMarkers = [];
+  const speciesStats = {};      // { 中文名: { count, markers: [] } }
+  let currentFilter = null;     // 当前被高亮的树种
 
-  if (Array.isArray(XA_GUSHU)) {
-    XA_GUSHU.forEach(function(t) {
-      if (!t.lng || !t.lat) return;
+  // 信息窗（用 Leaflet Popup）
+  function makePopupHtml(t) {
+    return `
+      <div class="info-window">
+        <b>${t.name || ""}${t.alias ? "（" + t.alias + "）" : ""}</b><br/>
+        古树编号：${t.id || ""}<br/>
+        树龄：${t.age || ""}<br/>
+        等级：${t.level || ""}<br/>
+        位置：${t.address || ""}<br/>
+        管护单位：${t.manager || ""}<br/>
+        管护责任人：${t.manager_person || ""}<br/>
+        文保单位内：${t.in_heritage || ""}
+      </div>
+    `;
+  }
 
-      var lng = Number(t.lng);
-      var lat = Number(t.lat);
-      if (!isFinite(lng) || !isFinite(lat)) return;
+  // 统计总数 & 创建点
+  (function initMapAndStats() {
+    if (typeof XA_GUSHU === "undefined") {
+      alert("未找到 XA_GUSHU 数据，请确认 xa_gushu.js 与本文件在同一文件夹。");
+      return;
+    }
 
-      var color = levelColor(t.level);
+    let validCount = 0;
+    XA_GUSHU.forEach(function (t) {
+      if (t.lng == null || t.lat == null || t.lng === "" || t.lat === "") return;
 
-      var marker = L.circleMarker([lat, lng], {
-        radius: 5,
+      // 1. 把高德 GCJ-02 转成 WGS84
+      const [lngWgs, latWgs] = gcj02ToWgs84(t.lng, t.lat);
+      if (isNaN(lngWgs) || isNaN(latWgs)) return;
+
+      const color = levelColor(t.level);
+
+      const marker = L.circleMarker([latWgs, lngWgs], {
+        radius: 4,
         color: "#ffffff",
         weight: 1,
         fillColor: color,
         fillOpacity: 0.9
-      }).addTo(markerGroup);
+      }).addTo(map);
 
-      var name  = t.name  || "";
-      var alias = t.alias || "";
+      marker.bindPopup(makePopupHtml(t));
+      marker._treeData = t;   // 附加数据，方便后面过滤使用
 
-      var popupHtml =
-        "<b>" + (name || "") + (alias ? "（" + alias + "）" : "") + "</b><br/>" +
-        "古树编号：" + (t.id || "") + "<br/>" +
-        "树龄：" + (t.age || "") + "<br/>" +
-        "等级：" + (t.level || "") + "<br/>" +
-        "位置：" + (t.address || "") + "<br/>" +
-        "管护单位：" + (t.manager || "") + "<br/>" +
-        "管护责任人：" + (t.manager_person || "") + "<br/>" +
-        "文保单位内：" + (t.in_heritage || "");
+      allMarkers.push(marker);
+      validCount += 1;
 
-      marker.bindPopup(popupHtml);
-
-      // === 统计树种 ===
-      var key = name || "未命名树种";
-      speciesCount[key] = (speciesCount[key] || 0) + 1;
-
-      // === 统计树龄（尽量从字符串里抽出数字） ===
-      var ageStr = String(t.age || "");
-      var match  = ageStr.match(/\d+/g);
-      if (match) {
-        // 如果有 "500年以上" / "100-299年" 之类，就取最大数字
-        var numericAge = Math.max.apply(null, match.map(Number));
-        if (numericAge > maxAge) maxAge = numericAge;
+      // 2. 统计树种（按中文名）
+      const sp = t.name || "未命名树种";
+      if (!speciesStats[sp]) {
+        speciesStats[sp] = { count: 0, markers: [] };
       }
-
-      totalCount += 1;
+      speciesStats[sp].count += 1;
+      speciesStats[sp].markers.push(marker);
     });
 
-    if (markerGroup.getLayers().length > 0) {
-      map.fitBounds(markerGroup.getBounds(), { padding: [20, 20] });
+    // 自动缩放到所有点
+    if (allMarkers.length > 0) {
+      const group = L.featureGroup(allMarkers);
+      map.fitBounds(group.getBounds().pad(0.1));
     }
+
+    // 更新左侧 summary
+    const summaryBox = document.getElementById("summary-box");
+    const speciesCount = Object.keys(speciesStats).length;
+    summaryBox.innerHTML = `
+      共定位到 <b>${validCount}</b> 棵古树，分属 <b>${speciesCount}</b> 个树种。<br/>
+      数据字段来自：古树编号、中文名、俗名、位置、树龄、等级、管护单位等。
+    `;
+
+    // 绘制树种统计列表
+    renderSpeciesList();
+  })();
+
+  // ============ 左侧树种列表 & 交互 ============
+  function renderSpeciesList() {
+    const listEl = document.getElementById("species-list");
+    listEl.innerHTML = "";
+
+    // 转数组并按数量排序
+    const items = Object.keys(speciesStats).map(function (name) {
+      return {
+        name: name,
+        count: speciesStats[name].count,
+        markers: speciesStats[name].markers
+      };
+    }).sort(function (a, b) {
+      return b.count - a.count;
+    });
+
+    if (items.length === 0) {
+      listEl.innerHTML = "<li style='padding:6px 8px;font-size:12px;color:#999;'>暂无树种统计。</li>";
+      return;
+    }
+
+    // 计算最大值，用于条形宽度
+    const maxCount = items[0].count;
+
+    items.forEach(function (item, index) {
+      const li = document.createElement("li");
+      li.className = "species-item";
+      li.dataset.species = item.name;
+
+      const colorDot = document.createElement("div");
+      colorDot.className = "species-color";
+      // 简单用一个柔和的绿色系，避免太花
+      colorDot.style.background = "#7aa28f";
+
+      const nameSpan = document.createElement("span");
+      nameSpan.className = "species-name";
+      nameSpan.textContent = item.name;
+
+      const countSpan = document.createElement("span");
+      countSpan.className = "species-count";
+      countSpan.textContent = item.count;
+
+      const bar = document.createElement("div");
+      bar.className = "species-bar";
+      const ratio = item.count / maxCount;
+      bar.style.width = (40 + ratio * 60) + "px";  // 最短 40px，最长 ~100px
+
+      li.appendChild(colorDot);
+      li.appendChild(nameSpan);
+      li.appendChild(countSpan);
+      li.appendChild(bar);
+
+      // 点击过滤/高亮
+      li.addEventListener("click", function () {
+        const sp = li.dataset.species;
+        toggleSpeciesFilter(sp, li);
+      });
+
+      listEl.appendChild(li);
+    });
   }
 
-  // ===== 2. 更新顶部小卡片 =====
-  document.getElementById("stat-total").textContent   = totalCount || "-";
-  document.getElementById("stat-species").textContent = Object.keys(speciesCount).length || "-";
-  document.getElementById("stat-max-age").textContent = maxAge ? (maxAge + " 年") : "-";
+  // 切换某个树种的过滤 / 高亮
+  function toggleSpeciesFilter(speciesName, liElement) {
+    const isSame = (currentFilter === speciesName);
 
-  // ===== 3. 用 Chart.js 画树种占比饼图 =====
-  var entries = Object.entries(speciesCount);   // [ [name, count], ... ]
-  entries.sort(function(a, b) { return b[1] - a[1]; });  // 按数量降序
+    // 如果点击的是当前已选树种 → 取消过滤，恢复全部
+    if (isSame) {
+      currentFilter = null;
+      // 恢复所有点样式
+      allMarkers.forEach(function (m) {
+        const t = m._treeData || {};
+        const color = levelColor(t.level);
+        m.setStyle({
+          radius: 4,
+          fillColor: color,
+          fillOpacity: 0.9,
+          opacity: 1
+        });
+      });
+      // 恢复所有列表项样式
+      const allItems = document.querySelectorAll(".species-item");
+      allItems.forEach(function (el) {
+        el.style.backgroundColor = "";
+        el.style.fontWeight = "normal";
+      });
+      return;
+    }
 
-  var top = entries.slice(0, 10);
-  var otherTotal = entries.slice(10).reduce(function(sum, e) {
-    return sum + e[1];
-  }, 0);
-  if (otherTotal > 0) {
-    top.push(["其它树种", otherTotal]);
-  }
+    currentFilter = speciesName;
 
-  var labels = top.map(function(e) { return e[0]; });
-  var data   = top.map(function(e) { return e[1]; });
+    // 先统一降暗所有点
+    allMarkers.forEach(function (m) {
+      m.setStyle({
+        fillOpacity: 0.15,
+        opacity: 0.3,
+        radius: 3
+      });
+    });
 
-  var ctx = document.getElementById("speciesChart").getContext("2d");
+    // 高亮指定树种
+    const target = speciesStats[speciesName];
+    if (target) {
+      target.markers.forEach(function (m) {
+        const t = m._treeData || {};
+        const color = levelColor(t.level);
+        m.setStyle({
+          fillOpacity: 0.95,
+          opacity: 1,
+          radius: 5,
+          fillColor: color
+        });
+      });
 
-  // 使用一组偏 Morandi 的配色，对应你给的 CMYK 方案调出来的近似值
-  var colors = [
-    "#b85b4e",  // 砖红
-    "#f3e7d8",  // 暖白米
-    "#c78d96",  // 粉褐
-    "#e2c47b",  // 柔黄
-    "#7a4a4d",  // 深酒红
-    "#9cab7c",  // 草灰绿
-    "#d7a16c",  // 驼色
-    "#a6b3a1",  // 灰绿
-    "#c27b7f",  // 玫褐
-    "#b2b2b2",  // 灰
-    "#e0ddd7"   // very light
-  ];
+      // 地图缩放到该树种范围
+      const group = L.featureGroup(target.markers);
+      map.fitBounds(group.getBounds().pad(0.1));
+    }
 
-  new Chart(ctx, {
-    type: "pie",
-    data: {
-      labels: labels,
-      datasets: [{
-        data: data,
-        backgroundColor: colors.slice(0, labels.length),
-        borderColor: "#ffffff",
-        borderWidth: 1
-      }]
-    },
-    options: {
-      plugins: {
-        legend: {
-          display: true,
-          position: "bottom",
-          labels: {
-            font: { size: 11 },
-            boxWidth: 10
-          }
-        },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              var label = context.label || "";
-              var value = context.parsed || 0;
-              var sum = data.reduce(function(a,b){return a+b;},0);
-              var pct = sum ? (value / sum * 100).toFixed(1) : 0;
-              return label + "： " + value + " 株（" + pct + "%）";
-            }
-          }
-        }
+    // 更新左侧列表高亮效果
+    const allItems = document.querySelectorAll(".species-item");
+    allItems.forEach(function (el) {
+      if (el.dataset.species === speciesName) {
+        el.style.backgroundColor = "#e0f0ff";
+        el.style.fontWeight = "bold";
+      } else {
+        el.style.backgroundColor = "";
+        el.style.fontWeight = "normal";
       }
-    }
-  });
+    });
+  }
 </script>
 </body>
 </html>
