@@ -73,9 +73,10 @@
       height: 100vh;
     }
 
+    /* 增加图例样式 */
     #legend {
       margin-top: 20px;
-      padding: 10px;
+      padding: 15px;
       background-color: #fff;
       border: 1px solid #ddd;
       border-radius: 4px;
@@ -83,14 +84,17 @@
     #legend .legend-item {
       display: flex;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 12px; /* 增加间距 */
     }
     #legend .legend-item span {
       display: inline-block;
-      width: 20px;
-      height: 20px;
+      width: 25px; /* 增大圆点标记 */
+      height: 25px; /* 增大圆点标记 */
       border-radius: 50%;
       margin-right: 10px;
+    }
+    #legend .legend-item span.level-label {
+      font-size: 16px; /* 增大文字大小 */
     }
 
     .small-text {
@@ -132,15 +136,15 @@
       <h2>图例</h2>
       <div class="legend-item">
         <span style="background-color: #b6543f;"></span>
-        <span>一级古树</span>
+        <span class="level-label">一级古树</span>
       </div>
       <div class="legend-item">
         <span style="background-color: #c7796b;"></span>
-        <span>二级古树</span>
+        <span class="level-label">二级古树</span>
       </div>
       <div class="legend-item">
         <span style="background-color: #8ca66b;"></span>
-        <span>三级古树</span>
+        <span class="level-label">三级古树</span>
       </div>
     </div>
 
@@ -459,3 +463,69 @@
       others += item[1];
     }
   });
+  if (others > 0) {
+    labels.push("其它树种");
+    data.push(others);
+  }
+
+  const ctx = document.getElementById("speciesChart").getContext("2d");
+
+  // 来自你给的配色（大致转成 HEX）
+  const morandiColors = [
+    "#b6543f", // C20 M60 Y60 K5
+    "#f3e9dd", // C10 M10 Y15 K0
+    "#c27d7d", // C20 M35 Y25 K0
+    "#f0d188", // C15 M20 Y60 K0
+    "#6c2b33", // C40 M60 Y50 K40
+    "#6b7c46", // C50 M20 Y55 K5
+    "#a37f3e"  // C60 M25 Y70 K10
+  ];
+
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "古树数量（株）",
+        data: data,
+        backgroundColor: labels.map((_, i) => morandiColors[i % morandiColors.length]),
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `${context.parsed.y} 株`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 11 } }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { font: { size: 11 } },
+          title: {
+            display: true,
+            text: "株数",
+            font: { size: 11 }
+          },
+          grid: { color: "#eee" }
+        }
+      }
+    }
+  });
+
+  // 初始化一次过滤（保证样式统一）
+  applyFilters();
+</script>
+</body>
+</html>
+
