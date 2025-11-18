@@ -4,16 +4,14 @@
   <meta charset="utf-8" />
   <title>西安市古树名木互动地图</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Leaflet 样式 -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
-      font-family: "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: "Microsoft YaHei", sans-serif;
       background: #f6f4f1;
     }
     .layout {
@@ -23,8 +21,6 @@
     }
     .sidebar {
       width: 340px;
-      max-width: 100%;
-      box-sizing: border-box;
       padding: 16px 18px;
       background: #f9f6f1;
       border-right: 1px solid #e0d6c8;
@@ -54,160 +50,126 @@
       color: #666;
       line-height: 1.6;
     }
-    .tag {
-      display: inline-block;
-      font-size: 11px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      background: #e7d6c6;
-      color: #5a3d32;
-      margin-right: 4px;
-    }
-    #map {
-      flex: 1;
-      height: 100vh;
-    }
-
-    input[type="text"],
-    input[type="range"],
-    select {
-      font-family: inherit;
-    }
-
-    #searchBox {
-      width: 100%;
-      padding: 6px 8px;
-      border-radius: 4px;
-      border: 1px solid #d0c4b3;
-      font-size: 12px;
-      box-sizing: border-box;
-      outline: none;
-    }
-    #searchBox:focus {
-      border-color: #7aa28f;
-      box-shadow: 0 0 0 1px rgba(122,162,143,0.25);
-    }
-
-    .small-text {
-      font-size: 11px;
-      color: #777;
-    }
-
-    /* 时间轴按钮 */
-    #timeline {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      margin-top: 4px;
-    }
-    .timeline-btn {
-      padding: 3px 8px;
-      background: #eee3da;
-      border-radius: 999px;
-      font-size: 11px;
-      cursor: pointer;
-      border: 1px solid transparent;
-      user-select: none;
-    }
-    .timeline-btn:hover {
-      background: #e0d0c2;
-    }
-    .timeline-btn.active {
-      background: #7aa28f;
-      color: #fff;
-      border-color: #5d8572;
-    }
-
-    /* 统计图容器 */
     .chart-card {
       background: #fff;
       border-radius: 8px;
       padding: 8px 10px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.06);
       border: 1px solid #e5ddd2;
-      max-width: 350px;  /* 限制最大宽度 */
-      max-height: 300px; /* 限制最大高度 */
-      overflow: hidden;  /* 防止溢出 */
-      margin: 0 auto;    /* 居中显示 */
+      max-width: 350px;
+      max-height: 300px;
+      overflow: hidden;
+      margin: 0 auto;
     }
-
-    .legend {
-      font-size: 11px;
-      color: #666;
-      margin-top: 4px;
+    #map {
+      flex: 1;
+      height: 100vh;
     }
-
-    .footer-note {
-      margin-top: 8px;
-      font-size: 11px;
-      color: #a18c7a;
-    }
-
-    /* Leaflet infoWindow 默认字体变小一点 */
-    .leaflet-popup-content {
-      font-size: 12px;
-      line-height: 1.5;
-    }
-    .leaflet-popup-content b {
-      font-size: 13px;
-    }
-
-    /* 图表的容器尺寸 */
     #speciesChart {
-      height: 120px; /* 调整图表高度 */
-      width: 250px;   /* 调整图表宽度 */
+      height: 160px;
+      width: 300px;
     }
   </style>
+  <script>
+    // 数据示例（XA_GUSHU）
+    var XA_GUSHU = [
+      {"id": "61011500097", "name": "国槐", "age": "600", "address": "西安市临潼区秦文化宫管委会", "lng": 109.214249, "lat": 34.367181},
+      {"id": "610104107001", "name": "侧柏", "age": "363", "address": "西安市莲湖区青年路街道西北一路社区", "lng": 108.926324, "lat": 34.26858},
+      {"id": "610104168001", "name": "紫丁香", "age": "138", "address": "西安市莲湖区青年路街道西北一路社区", "lng": 108.926324, "lat": 34.26858},
+      {"id": "610104135003", "name": "国槐", "age": "183", "address": "西安市莲湖区北院门街道安定社区", "lng": 108.926324, "lat": 34.26858}
+      // 更多数据...
+    ];
 
-  <!-- 引入 Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    // ===================== 统计树种数据 =====================
+    const speciesCount = {};
+    XA_GUSHU.forEach(tree => {
+      const species = tree.name || "未注明";
+      speciesCount[species] = (speciesCount[species] || 0) + 1;
+    });
 
-  <!-- 引入 Chart.js，用于树种统计图 -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    // ===================== 创建树种统计图（Chart.js） =====================
+    const speciesEntries = Object.entries(speciesCount).sort((a, b) => b[1] - a[1]);
+    const topN = 8;
+    const labels = [];
+    const data = [];
+    let others = 0;
 
-  <!-- 古树数据：var XA_GUSHU = [...] -->
-  <script src="xa_gushu.js"></script>
+    speciesEntries.forEach((item, idx) => {
+      if (idx < topN) {
+        labels.push(item[0]);
+        data.push(item[1]);
+      } else {
+        others += item[1];
+      }
+    });
+    if (others > 0) {
+      labels.push("其它树种");
+      data.push(others);
+    }
+
+    const ctx = document.getElementById("speciesChart").getContext("2d");
+    new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: labels,
+        datasets: [{
+          label: "古树数量（株）",
+          data: data,
+          backgroundColor: labels.map((_, i) => i % 2 === 0 ? '#7aa28f' : '#f0c172'),
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: (context) => `${context.parsed.y} 株` } }
+        },
+        scales: {
+          x: { ticks: { font: { size: 11 } } },
+          y: {
+            beginAtZero: true,
+            ticks: { font: { size: 11 } },
+            title: { display: true, text: "株数", font: { size: 11 } }
+          }
+        }
+      }
+    });
+
+    // ===================== Leaflet 初始化地图 =====================
+    const map = L.map("map").setView([34.27, 108.95], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // ===================== 在地图上添加树木标记 =====================
+    XA_GUSHU.forEach(tree => {
+      const pos = [tree.lat, tree.lng];
+      const popupHtml = `
+        <div>
+          <b>${tree.name}</b><br/>
+          树龄：${tree.age}年<br/>
+          地址：${tree.address}<br/>
+        </div>
+      `;
+      L.marker(pos).addTo(map).bindPopup(popupHtml);
+    });
+  </script>
 </head>
 <body>
   <div class="layout">
-    <!-- 左侧控制栏 -->
     <aside class="sidebar">
+      <h1>西安市古树名木</h1>
       <div>
-        <h1>西安市古树名木</h1>
-        <p class="small-text">数据来源：西安市城市古树名木清单（坐标系：WGS84，对接 OpenStreetMap）。</p>
-        <span id="treeCountTag">共 0 株</span>
-      </div>
-      
-      <!-- 搜索 -->
-      <div>
-        <h2>🔍 搜索古树</h2>
-        <input id="searchBox" type="text" placeholder="按树种、位置、管护单位等关键字搜索" />
-      </div>
-
-      <!-- 树龄筛选 -->
-      <div>
-        <h2>🌱 按树龄筛选</h2>
-        <input type="range" id="ageMin" min="0" max="1000" value="0" />
-        <input type="range" id="ageMax" min="0" max="1000" value="1000" />
-      </div>
-
-      <!-- 树种统计图 -->
-      <div>
-        <h2>📊 树种组成</h2>
+        <h2>🌱 树种统计</h2>
         <div class="chart-card">
-          <canvas id="speciesChart" height="120" width="250"></canvas> <!-- 设置图表高度为120px，宽度为250px -->
-          <div class="legend">统计的是古树数量前若干的树种，其余合并为“其它树种”。颜色使用一组柔和的莫兰迪色。</div>
+          <canvas id="speciesChart" height="160" width="300"></canvas>
         </div>
       </div>
     </aside>
-
-    <!-- 右侧地图 -->
     <main id="map"></main>
   </div>
-
-  <script>
-    // 初始化 Leaflet 地图和其他功能代码
-  </script>
 </body>
 </html>
 
