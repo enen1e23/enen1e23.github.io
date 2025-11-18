@@ -10,9 +10,8 @@
     rel="stylesheet" 
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
-    crossorigin=""
-  />
-
+    crossorigin=""/>
+  
   <style>
     html, body {
       margin: 0;
@@ -73,24 +72,24 @@
       height: 100vh;
     }
 
-    input[type="text"],
-    input[type="range"],
-    select {
-      font-family: inherit;
+    /* 横向排列的图例 */
+    .legend-container {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-size: 14px;
+    }
+    .legend-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      margin-right: 5px;
     }
 
-    #searchBox {
-      width: 100%;
-      padding: 6px 8px;
-      border-radius: 4px;
-      border: 1px solid #d0c4b3;
-      font-size: 12px;
-      box-sizing: border-box;
-      outline: none;
-    }
-    #searchBox:focus {
-      border-color: #7aa28f;
-      box-shadow: 0 0 0 1px rgba(122,162,143,0.25);
+    /* 调整图例的图标尺寸 */
+    .legend-text {
+      font-size: 16px;
+      font-weight: bold;
     }
 
     .small-text {
@@ -98,7 +97,7 @@
       color: #777;
     }
 
-    /* 时间轴按钮 */
+    /* 调整按钮样式 */
     #timeline {
       display: flex;
       gap: 6px;
@@ -132,25 +131,10 @@
       border: 1px solid #e5ddd2;
     }
 
-    .legend {
-      font-size: 11px;
-      color: #666;
-      margin-top: 4px;
-    }
-
     .footer-note {
       margin-top: 8px;
       font-size: 11px;
       color: #a18c7a;
-    }
-
-    /* Leaflet infoWindow 默认字体变小一点 */
-    .leaflet-popup-content {
-      font-size: 12px;
-      line-height: 1.5;
-    }
-    .leaflet-popup-content b {
-      font-size: 13px;
     }
 
     @media (max-width: 768px) {
@@ -167,44 +151,13 @@
         height: 50vh;
       }
     }
-
-    /* 图表的容器尺寸 */
-    #speciesChart {
-      height: 120px; /* 调整图表高度 */
-      width: 250px;   /* 调整图表宽度 */
-    }
-
-    /* 图例样式调整 */
-    .info.legend {
-      background-color: white;
-      padding: 10px;
-      border-radius: 6px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .info.legend i {
-      border-radius: 50%;
-      width: 30px;  /* 增加图例图标的大小 */
-      height: 30px;  /* 增加图例图标的大小 */
-    }
-
-    .info.legend div {
-      font-size: 16px;  /* 增大字体 */
-      line-height: 30px;  /* 增加行高，使文字与图标间有足够的空间 */
-      color: #333;
-    }
-
-    .info.legend i:hover {
-      cursor: pointer;
-    }
   </style>
 
   <!-- 引入 Leaflet JS -->
   <script 
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
-    crossorigin=""
-  ></script>
+    crossorigin=""></script>
 
   <!-- 引入 Chart.js，用于树种统计图 -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -225,6 +178,18 @@
         <span class="tag">市树：国槐</span>
         <span class="tag" id="treeCountTag">共 0 株</span>
       </div>
+    </div>
+
+    <!-- 图例显示 -->
+    <div class="legend-container">
+      <div class="legend-icon" style="background-color: #b6543f;"></div>
+      <span class="legend-text">一级古树名木</span>
+
+      <div class="legend-icon" style="background-color: #c7796b;"></div>
+      <span class="legend-text">二级古树名木</span>
+
+      <div class="legend-icon" style="background-color: #8ca66b;"></div>
+      <span class="legend-text">三级古树名木</span>
     </div>
 
     <!-- 搜索 -->
