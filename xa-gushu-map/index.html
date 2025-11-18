@@ -493,5 +493,94 @@
       currentAgeMin = minAge;
       currentAgeMax = maxAge;
 
-      // 同
+      // 同步滑块 & 标签
+      ageMinSlider.value = minAge;
+      ageMaxSlider.value = maxAge;
+      ageMinLabel.textContent = minAge;
+      ageMaxLabel.textContent = maxAge;
+
+      applyFilters();
+    });
+  });
+
+  // ===================== 树种统计图（Chart.js） =====================
+  const speciesEntries = Object.entries(speciesCount).sort((a, b) => b[1] - a[1]);
+
+  const topN = 8;
+  const labels = [];
+  const data = [];
+  let others = 0;
+  speciesEntries.forEach((item, idx) => {
+    if (idx < topN) {
+      labels.push(item[0]);
+      data.push(item[1]);
+    } else {
+      others += item[1];
+    }
+  });
+  if (others > 0) {
+    labels.push("其它树种");
+    data.push(others);
+  }
+
+  const ctx = document.getElementById("speciesChart").getContext("2d");
+
+  // 来自你给的配色（大致转成 HEX）
+  const morandiColors = [
+    "#b6543f", // C20 M60 Y60 K5
+    "#f3e9dd", // C10 M10 Y15 K0
+    "#c27d7d", // C20 M35 Y25 K0
+    "#f0d188", // C15 M20 Y60 K0
+    "#6c2b33", // C40 M60 Y50 K40
+    "#6b7c46", // C50 M20 Y55 K5
+    "#a37f3e"  // C60 M25 Y70 K10
+  ];
+
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "古树数量（株）",
+        data: data,
+        backgroundColor: labels.map((_, i) => morandiColors[i % morandiColors.length]),
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `${context.parsed.y} 株`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { font: { size: 11 } }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { font: { size: 11 } },
+          title: {
+            display: true,
+            text: "株数",
+            font: { size: 11 }
+          },
+          grid: { color: "#eee" }
+        }
+      }
+    }
+  });
+
+  // 初始化一次过滤（保证样式统一）
+  applyFilters();
+</script>
+</body>
+</html>
 
