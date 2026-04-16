@@ -1246,14 +1246,24 @@ function removePendingPhoto(index) { pendingPhotos.splice(index, 1); renderPendi
 
 // ==================== ★ 核心：用 ImgBB 上传图片 ★ ====================
 document.getElementById('submitPhotos').addEventListener('click', async () => {
-  if (pendingPhotos.length === 0) { alert('请先选择照片'); return; }
+  if (pendingPhotos.length === 0) {
+    alert('请先选择照片');
+    return;
+  }
+  
+  // ★ 立刻取走并清空，防止重复提交
+  const photosToUpload = [...pendingPhotos];
+  pendingPhotos = [];
+  document.getElementById('photoPreviewGrid').innerHTML = '';
+
   const caption = document.getElementById('photoCaption').value.trim();
   const author = document.getElementById('photoAuthor').value.trim() || '匿名';
   const btn = document.getElementById('submitPhotos');
   btn.disabled = true;
   btn.textContent = '上传中...';
+  
   try {
-    for (const photo of pendingPhotos) {
+    for (const photo of photosToUpload) {  
       // 上传到 ImgBB（免费图床）
       const formData = new FormData();
       formData.append('image', photo.dataUrl.split(',')[1]); // 去掉 base64 前缀
