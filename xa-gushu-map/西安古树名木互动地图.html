@@ -747,7 +747,7 @@ var XA_GUSHU = [
 <script>
 // ==================== ⚠️ 配置区域 ====================
 // 1. 去 https://api.imgbb.com 免费注册，登录后首页可看到 API Key
-const IMGBB_API_KEY = '3526211a953b2bb104904f32ac7ad91b'; 
+const IMGBB_API_KEY = '你的ImgBB_API_Key';  // ← 替换这里
 
 // 2. Firebase 配置（Firestore 用于存储纸条和照片URL，不需要 Storage）
 const firebaseConfig = {
@@ -1171,13 +1171,16 @@ function updateTotalPhotosCount() {
 document.getElementById('allPhotosBtn').addEventListener('click', () => {
   document.getElementById('viewPhotosTitle').textContent = '所有古树照片';
   const allPhotos = [];
-  for (const treeId in photosCache) photosCache[treeId].forEach(photo => allPhotos.push({ ...photo, _treeId: treeId }));
-  if (treeId === '__all__') continue;
+  for (const treeId in photosCache) {
+    if (treeId === '__all__') continue; // 跳过临时key，避免每次点击翻倍
+    photosCache[treeId].forEach(photo => allPhotos.push({ ...photo, _treeId: treeId }));
+  }
   allPhotos.sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
+  // 每次点击都重新赋值，覆盖上一次
+  photosCache['__all__'] = allPhotos;
   if (allPhotos.length === 0) {
     document.getElementById('photosList').innerHTML = `<div class="empty-notes"><div class="icon">📷</div><div>还没有人上传照片</div><div style="font-size:11px;margin-top:5px;color:#aaa;">点击古树，上传第一张照片吧</div></div>`;
   } else {
-    photosCache['__all__'] = allPhotos;
     document.getElementById('photosList').innerHTML = `
       <div class="photo-preview-grid" style="grid-template-columns: repeat(3, 1fr);">
         ${allPhotos.slice(0, 30).map((p, i) => `
@@ -1247,24 +1250,18 @@ function removePendingPhoto(index) { pendingPhotos.splice(index, 1); renderPendi
 
 // ==================== ★ 核心：用 ImgBB 上传图片 ★ ====================
 document.getElementById('submitPhotos').addEventListener('click', async () => {
-  if (pendingPhotos.length === 0) {
-    alert('请先选择照片');
-    return;
-  }
-  
-  // ★ 立刻取走并清空，防止重复提交
+  if (pendingPhotos.length === 0) { alert('请先选择照片'); return; }
+  // 立刻取走并清空，防止重复点击重复上传
   const photosToUpload = [...pendingPhotos];
   pendingPhotos = [];
   document.getElementById('photoPreviewGrid').innerHTML = '';
-
   const caption = document.getElementById('photoCaption').value.trim();
   const author = document.getElementById('photoAuthor').value.trim() || '匿名';
   const btn = document.getElementById('submitPhotos');
   btn.disabled = true;
   btn.textContent = '上传中...';
-  
   try {
-    for (const photo of photosToUpload) {  
+    for (const photo of photosToUpload) {
       // 上传到 ImgBB（免费图床）
       const formData = new FormData();
       formData.append('image', photo.dataUrl.split(',')[1]); // 去掉 base64 前缀
