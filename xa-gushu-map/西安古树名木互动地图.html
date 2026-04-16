@@ -1143,6 +1143,7 @@ loadAllNotes().then(() => { loadAllPhotos().then(() => { applyFilters(); }); });
 // ==================== 照片数据管理 ====================
 let photosCache = {};
 let pendingPhotos = [];
+let allPhotosCache = []; // 专用于"查看所有照片"灯箱，与 photosCache 完全隔离
 
 async function loadAllPhotos() {
   if (firebaseEnabled) {
@@ -1156,34 +1157,39 @@ async function loadAllPhotos() {
       });
     } catch (e) { console.error("加载照片失败", e); }
   } else {
-    photosCache = JSON.parse(localStorage.getItem('photosCache') || '{}');
+    const saved = JSON.parse(localStorage.getItem('photosCache') || '{}');
+    // 确保从 localStorage 读取时不包含 __all__ 残留
+    photosCache = {};
+    for (const k in saved) {
+      if (k !== '__all__') photosCache[k] = saved[k];
+    }
   }
   updateTotalPhotosCount();
 }
 function getPhotosCount(treeId) { return (photosCache[treeId] || []).length; }
 function updateTotalPhotosCount() {
   let total = 0;
-  for (const treeId in photosCache) total += photosCache[treeId].length;
+  for (const treeId in photosCache) {
+    if (treeId === '__all__') continue; // 安全保险
+    total += photosCache[treeId].length;
+  }
   document.getElementById('totalPhotosCount').textContent = total;
 }
 
 // 查看所有照片
 document.getElementById('allPhotosBtn').addEventListener('click', () => {
   document.getElementById('viewPhotosTitle').textContent = '所有古树照片';
-  const allPhotos = [];
+  allPhotosCache = []; // 每次点击完全重建，不累积
   for (const treeId in photosCache) {
-    if (treeId === '__all__') continue; // 跳过临时key，避免每次点击翻倍
-    photosCache[treeId].forEach(photo => allPhotos.push({ ...photo, _treeId: treeId }));
+    photosCache[treeId].forEach(photo => allPhotosCache.push({ ...photo, _treeId: treeId }));
   }
-  allPhotos.sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
-  // 每次点击都重新赋值，覆盖上一次
-  photosCache['__all__'] = allPhotos;
-  if (allPhotos.length === 0) {
+  allPhotosCache.sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
+  if (allPhotosCache.length === 0) {
     document.getElementById('photosList').innerHTML = `<div class="empty-notes"><div class="icon">📷</div><div>还没有人上传照片</div><div style="font-size:11px;margin-top:5px;color:#aaa;">点击古树，上传第一张照片吧</div></div>`;
   } else {
     document.getElementById('photosList').innerHTML = `
       <div class="photo-preview-grid" style="grid-template-columns: repeat(3, 1fr);">
-        ${allPhotos.slice(0, 30).map((p, i) => `
+        ${allPhotosCache.slice(0, 30).map((p, i) => `
           <div class="photo-preview-item" onclick="openLightbox('__all__', ${i})" style="position:relative;">
             <img src="${p.imageUrl}" alt="${p.caption || ''}" />
             ${p.isPanorama ? '<span class="pano-badge">🌐 全景</span>' : ''}
@@ -1191,7 +1197,7 @@ document.getElementById('allPhotosBtn').addEventListener('click', () => {
           </div>
         `).join('')}
       </div>
-      ${allPhotos.length > 30 ? `<p style="text-align:center;font-size:11px;color:#888;margin-top:10px;">仅显示最新30张</p>` : ''}
+      ${allPhotosCache.length > 30 ? `<p style="text-align:center;font-size:11px;color:#888;margin-top:10px;">仅显示最新30张</p>` : ''}
     `;
   }
   openModal('viewPhotosModal');
@@ -1287,7 +1293,10 @@ document.getElementById('submitPhotos').addEventListener('click', async () => {
       } else {
         if (!photosCache[currentUploadTreeId]) photosCache[currentUploadTreeId] = [];
         photosCache[currentUploadTreeId].unshift({ ...photoData, id: Date.now().toString() });
-        localStorage.setItem('photosCache', JSON.stringify(photosCache));
+        // 保存时排除 __all__，防止重复累积
+        const cacheToSave = {};
+        for (const k in photosCache) { if (k !== '__all__') cacheToSave[k] = photosCache[k]; }
+        localStorage.setItem('photosCache', JSON.stringify(cacheToSave));
       }
     }
     await loadAllPhotos();
@@ -1323,7 +1332,8 @@ function viewTreePhotos(treeId, treeName) {
 let lightboxPhotos = [];
 let lightboxIndex = 0;
 function openLightbox(treeId, index) {
-  lightboxPhotos = photosCache[treeId] || [];
+  // __all__ 使用专用变量，不从 photosCache 读取，避免翻倍
+  lightboxPhotos = (treeId === '__all__') ? allPhotosCache : (photosCache[treeId] || []);
   lightboxIndex = index;
   showLightboxPhoto();
   document.getElementById('lightbox').classList.add('show');
