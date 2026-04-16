@@ -1172,6 +1172,7 @@ document.getElementById('allPhotosBtn').addEventListener('click', () => {
   document.getElementById('viewPhotosTitle').textContent = '所有古树照片';
   const allPhotos = [];
   for (const treeId in photosCache) photosCache[treeId].forEach(photo => allPhotos.push({ ...photo, _treeId: treeId }));
+  if (treeId === '__all__') continue;
   allPhotos.sort((a, b) => new Date(b.createTime) - new Date(a.createTime));
   if (allPhotos.length === 0) {
     document.getElementById('photosList').innerHTML = `<div class="empty-notes"><div class="icon">📷</div><div>还没有人上传照片</div><div style="font-size:11px;margin-top:5px;color:#aaa;">点击古树，上传第一张照片吧</div></div>`;
