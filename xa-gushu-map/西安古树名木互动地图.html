@@ -1975,8 +1975,17 @@ async function exportData(collectionName) {
   } catch (e) { console.error('导出失败', e); alert('导出失败：' + e.message); }
 }
 if (window.location.search.includes('admin')) {
-  setTimeout(() => { openModal('adminModal'); loadAdminCounts(); }, 1000);
+  setTimeout(() => {
+    const pwd = prompt('请输入管理员密码：');
+    if (pwd === '你设定的密码') {
+      openModal('adminModal');
+      loadAdminCounts();
+    } else if (pwd !== null) {
+      alert('密码错误');
+    }
+  }, 500);
 }
+
 document.addEventListener('keydown', (e) => {
   if (e.ctrlKey && e.shiftKey && e.key === 'A') { openModal('adminModal'); loadAdminCounts(); }
 });
