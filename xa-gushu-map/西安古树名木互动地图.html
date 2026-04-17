@@ -343,6 +343,7 @@
 <div class="bottom-btns">
   <button class="fab-btn" style="background:linear-gradient(135deg, #a5d6a7 0%, #81c784 100%);color:#2e7d32;" id="allPhotosBtn" title="查看所有照片">📷</button>
   <button class="fab-btn notes" id="notesBtn" title="查看所有纸条">🏷️</button>
+  <button class="fab-btn" style="background:linear-gradient(135deg, #8b9dc3 0%, #6b7daa 100%);color:#fff;" id="myReportsBtn" title="我的上报">📋</button>
   <button class="fab-btn report" id="reportBtn" title="上报古树">📍</button>
 </div>
 
@@ -537,6 +538,80 @@
   </div>
 </div>
 
+<!-- 我的上报列表模态框 -->
+<div class="modal-overlay" id="myReportsModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3>📋 我的上报记录</h3>
+      <button class="modal-close" onclick="closeModal('myReportsModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="myReportsList">
+      <!-- 动态填充 -->
+    </div>
+  </div>
+</div>
+
+<!-- 编辑上报模态框 -->
+<div class="modal-overlay" id="editReportModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-header">
+      <h3>✏️ 编辑我的上报</h3>
+      <button class="modal-close" onclick="closeModal('editReportModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editReportId" />
+      <div class="form-group">
+        <label>树种名称 *</label>
+        <input type="text" id="editReportName" placeholder="如：国槐、侧柏、银杏..." />
+      </div>
+      <div class="form-group">
+        <label>预估树龄</label>
+        <input type="text" id="editReportAge" placeholder="如：约300年..." />
+      </div>
+      <div class="form-group">
+        <label>地址搜索微调位置</label>
+        <div class="location-row">
+          <input type="text" id="editAddressSearch" placeholder="搜索地址重新定位..." />
+          <button class="gps-btn" id="editGeocodeBtn">🔍 搜索</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>在地图上调整位置（可拖动标记）</label>
+        <div id="editPickMap" style="height:180px;border-radius:6px;background:#eee;margin-bottom:6px;border:1px solid #d0c4b3;"></div>
+        <div class="location-row">
+          <input type="text" id="editLng" placeholder="经度" readonly style="background:#f5f5f5;" />
+          <input type="text" id="editLat" placeholder="纬度" readonly style="background:#f5f5f5;" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label>详细地址备注</label>
+        <input type="text" id="editReportAddress" placeholder="具体位置描述..." />
+      </div>
+      <div class="form-group">
+        <label>备注说明</label>
+        <textarea id="editReportNote" placeholder="其他补充信息..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="submit-btn" id="saveEditReport" style="flex:2;">💾 保存修改</button>
+        <button class="submit-btn" id="deleteMyReport" style="flex:1;background:linear-gradient(135deg,#e74c3c,#c0392b);">🗑 删除</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 管理员审核模态框 -->
+<div class="modal-overlay" id="adminReviewModal">
+  <div class="modal" style="max-width:500px;">
+    <div class="modal-header">
+      <h3>🔍 用户上报审核</h3>
+      <button class="modal-close" onclick="closeModal('adminReviewModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="adminReviewList">
+      <!-- 动态填充 -->
+    </div>
+  </div>
+</div>
+
 <!-- 管理员数据导出模态框 -->
 <div class="modal-overlay" id="adminModal">
   <div class="modal" style="max-width:500px;">
@@ -547,6 +622,9 @@
     <div class="modal-body">
       <p style="font-size:12px;color:#666;margin-bottom:16px;">导出Firebase中的用户提交数据，用于整理更新</p>
       <div style="display:flex;flex-direction:column;gap:10px;">
+        <button class="submit-btn" onclick="openAdminReview()" style="background:linear-gradient(135deg, #9b59b6 0%, #7d3c98 100%);">
+          🔍 审核用户上报 (<span id="pendingReportsCount">0</span> 条待审)
+        </button>
         <button class="submit-btn" onclick="exportData('corrections')" style="background:linear-gradient(135deg, #e67e22 0%, #d35400 100%);">
           📍 导出位置纠错 (<span id="correctionsCount">0</span>条)
         </button>
@@ -1132,13 +1210,23 @@ document.getElementById('submitReport').addEventListener('click', async () => {
     reportTime: new Date().toISOString(), isUserReport: true
   };
   if (firebaseEnabled) {
-    try { await db.collection('reported_trees').add(tree); alert('✅ 上报成功！'); }
+    try {
+      const docRef = await db.collection('reported_trees').add({ ...tree, status: 'pending' });
+      const myIds = JSON.parse(localStorage.getItem('myReportIds') || '[]');
+      myIds.push(docRef.id);
+      localStorage.setItem('myReportIds', JSON.stringify(myIds));
+      alert('✅ 上报成功！可在「我的上报」中查看和编辑。');
+    }
     catch (e) { alert('上报失败，请重试'); return; }
   } else {
+    const localId = 'local_' + Date.now();
     const reports = JSON.parse(localStorage.getItem('reportedTrees') || '[]');
-    reports.unshift(tree);
+    reports.unshift({ ...tree, id: localId, status: 'pending' });
     localStorage.setItem('reportedTrees', JSON.stringify(reports));
-    alert('✅ 上报成功！（本地保存）');
+    const myIds = JSON.parse(localStorage.getItem('myReportIds') || '[]');
+    myIds.push(localId);
+    localStorage.setItem('myReportIds', JSON.stringify(myIds));
+    alert('✅ 上报成功！可在「我的上报」中查看和编辑。');
   }
   const marker = new AMap.CircleMarker({
     center: [tree.lng, tree.lat], radius: 8,
@@ -1551,6 +1639,303 @@ document.getElementById('submitCorrection').addEventListener('click', async () =
   } catch (e) { console.error('提交纠错失败', e); alert('提交失败，请重试'); }
 });
 
+// ==================== 我的上报管理 ====================
+let editPickMap = null;
+let editPickMarker = null;
+
+// 打开我的上报列表
+document.getElementById('myReportsBtn').addEventListener('click', async () => {
+  openModal('myReportsModal');
+  await loadMyReports();
+});
+
+async function loadMyReports() {
+  const listEl = document.getElementById('myReportsList');
+  listEl.innerHTML = '<p style="text-align:center;color:#999;font-size:12px;">加载中...</p>';
+
+  const myIds = JSON.parse(localStorage.getItem('myReportIds') || '[]');
+  if (myIds.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty-notes">
+        <div class="icon">📋</div>
+        <div>还没有上报记录</div>
+        <div style="font-size:11px;margin-top:5px;color:#aaa;">点击右下角 📍 按钮上报古树</div>
+      </div>`;
+    return;
+  }
+
+  let reports = [];
+  if (firebaseEnabled) {
+    try {
+      for (const id of myIds) {
+        if (id.startsWith('local_')) continue;
+        const doc = await db.collection('reported_trees').doc(id).get();
+        if (doc.exists) reports.push({ id: doc.id, ...doc.data() });
+      }
+    } catch(e) { console.error(e); }
+  }
+
+  // 本地存储的也显示
+  const localReports = JSON.parse(localStorage.getItem('reportedTrees') || '[]');
+  localReports.forEach(r => {
+    if (myIds.includes(r.id)) reports.push(r);
+  });
+
+  if (reports.length === 0) {
+    listEl.innerHTML = `<div class="empty-notes"><div class="icon">📋</div><div>未找到上报记录（可能已被删除）</div></div>`;
+    return;
+  }
+
+  const statusLabel = { pending: '⏳ 待审核', approved: '✅ 已通过', rejected: '❌ 已拒绝' };
+  const statusColor = { pending: '#f39c12', approved: '#27ae60', rejected: '#e74c3c' };
+
+  listEl.innerHTML = reports.map(r => `
+    <div style="border:1px solid #e0d6c8;border-radius:8px;padding:12px;margin-bottom:10px;background:#faf8f5;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">
+        <b style="font-size:14px;color:#5a3d32;">${r.name || '未知树种'}</b>
+        <span style="font-size:10px;font-weight:600;color:${statusColor[r.status]||'#999'};">
+          ${statusLabel[r.status] || '未知状态'}
+        </span>
+      </div>
+      <div style="font-size:11px;color:#888;margin-bottom:4px;">📍 ${r.address || `${r.lng?.toFixed(4)}, ${r.lat?.toFixed(4)}`}</div>
+      ${r.age ? `<div style="font-size:11px;color:#888;margin-bottom:4px;">🌳 树龄：${r.age}</div>` : ''}
+      <div style="font-size:10px;color:#aaa;margin-bottom:8px;">上报于 ${r.reportTime ? new Date(r.reportTime).toLocaleDateString('zh-CN') : '未知'}</div>
+      ${r.status !== 'approved' ? `
+        <div style="display:flex;gap:6px;">
+          <button onclick="openEditReport('${r.id}')" 
+            style="flex:1;padding:6px;background:#7aa28f;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;">
+            ✏️ 编辑
+          </button>
+          <button onclick="deleteMyReport('${r.id}')"
+            style="flex:1;padding:6px;background:#e74c3c;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;">
+            🗑 删除
+          </button>
+        </div>` : '<div style="font-size:10px;color:#27ae60;text-align:center;">已通过审核，如需修改请联系管理员</div>'}
+    </div>
+  `).join('');
+}
+
+// 打开编辑弹窗
+async function openEditReport(reportId) {
+  let report = null;
+  if (firebaseEnabled && !reportId.startsWith('local_')) {
+    const doc = await db.collection('reported_trees').doc(reportId).get();
+    if (doc.exists) report = { id: doc.id, ...doc.data() };
+  } else {
+    const locals = JSON.parse(localStorage.getItem('reportedTrees') || '[]');
+    report = locals.find(r => r.id === reportId);
+  }
+  if (!report) { alert('找不到该记录'); return; }
+
+  document.getElementById('editReportId').value = reportId;
+  document.getElementById('editReportName').value = report.name || '';
+  document.getElementById('editReportAge').value = report.age || '';
+  document.getElementById('editReportAddress').value = report.address || '';
+  document.getElementById('editReportNote').value = report.note || '';
+  document.getElementById('editLng').value = report.lng || '';
+  document.getElementById('editLat').value = report.lat || '';
+  document.getElementById('editAddressSearch').value = '';
+
+  closeModal('myReportsModal');
+  openModal('editReportModal');
+
+  // 初始化编辑地图
+  setTimeout(() => {
+    const lng = parseFloat(report.lng) || 108.95;
+    const lat = parseFloat(report.lat) || 34.27;
+    if (editPickMap) { editPickMap.destroy(); editPickMap = null; editPickMarker = null; }
+    editPickMap = new AMap.Map('editPickMap', { zoom: 16, center: [lng, lat], mapStyle: 'amap://styles/whitesmoke' });
+    editPickMarker = new AMap.Marker({ position: [lng, lat], draggable: true, cursor: 'move' });
+    editPickMarker.setMap(editPickMap);
+    editPickMarker.on('dragend', () => {
+      const pos = editPickMarker.getPosition();
+      document.getElementById('editLng').value = pos.getLng().toFixed(6);
+      document.getElementById('editLat').value = pos.getLat().toFixed(6);
+    });
+    editPickMap.on('click', e => {
+      const lng2 = e.lnglat.getLng(), lat2 = e.lnglat.getLat();
+      editPickMarker.setPosition([lng2, lat2]);
+      document.getElementById('editLng').value = lng2.toFixed(6);
+      document.getElementById('editLat').value = lat2.toFixed(6);
+    });
+  }, 300);
+}
+
+// 编辑弹窗内地址搜索
+document.getElementById('editGeocodeBtn').addEventListener('click', function() {
+  const keyword = document.getElementById('editAddressSearch').value.trim();
+  if (!keyword) return;
+  this.disabled = true; this.textContent = '搜索中...';
+  const btn = this;
+  AMap.plugin('AMap.Geocoder', () => {
+    const geocoder = new AMap.Geocoder({ city: '西安', radius: 50000 });
+    geocoder.getLocation(keyword, (status, result) => {
+      btn.disabled = false; btn.textContent = '🔍 搜索';
+      if (status === 'complete' && result.geocodes?.length > 0) {
+        const loc = result.geocodes[0].location;
+        const lng = loc.getLng(), lat = loc.getLat();
+        if (editPickMap && editPickMarker) {
+          editPickMap.setCenter([lng, lat]);
+          editPickMap.setZoom(17);
+          editPickMarker.setPosition([lng, lat]);
+        }
+        document.getElementById('editLng').value = lng.toFixed(6);
+        document.getElementById('editLat').value = lat.toFixed(6);
+      } else { alert('未找到该地址'); }
+    });
+  });
+});
+
+// 保存编辑
+document.getElementById('saveEditReport').addEventListener('click', async () => {
+  const id = document.getElementById('editReportId').value;
+  const name = document.getElementById('editReportName').value.trim();
+  const lng = document.getElementById('editLng').value;
+  const lat = document.getElementById('editLat').value;
+  if (!name) { alert('请填写树种名称'); return; }
+  if (!lng || !lat) { alert('请在地图上选点定位'); return; }
+
+  const updated = {
+    name,
+    age: document.getElementById('editReportAge').value.trim(),
+    lng: parseFloat(lng),
+    lat: parseFloat(lat),
+    address: document.getElementById('editReportAddress').value.trim(),
+    note: document.getElementById('editReportNote').value.trim(),
+    updatedTime: new Date().toISOString()
+  };
+
+  try {
+    if (firebaseEnabled && !id.startsWith('local_')) {
+      await db.collection('reported_trees').doc(id).update(updated);
+    } else {
+      const locals = JSON.parse(localStorage.getItem('reportedTrees') || '[]');
+      const idx = locals.findIndex(r => r.id === id);
+      if (idx !== -1) { locals[idx] = { ...locals[idx], ...updated }; }
+      localStorage.setItem('reportedTrees', JSON.stringify(locals));
+    }
+    alert('✅ 修改已保存！');
+    if (editPickMap) { editPickMap.destroy(); editPickMap = null; editPickMarker = null; }
+    closeModal('editReportModal');
+    openModal('myReportsModal');
+    await loadMyReports();
+  } catch(e) { alert('保存失败：' + e.message); }
+});
+
+// 删除上报（从编辑弹窗的删除按钮）
+document.getElementById('deleteMyReport').addEventListener('click', async () => {
+  const id = document.getElementById('editReportId').value;
+  if (!confirm('确定要删除这条上报记录吗？')) return;
+  await deleteMyReport(id);
+  if (editPickMap) { editPickMap.destroy(); editPickMap = null; editPickMarker = null; }
+  closeModal('editReportModal');
+});
+
+// 删除上报（通用函数，列表和编辑弹窗都用）
+async function deleteMyReport(id) {
+  try {
+    if (firebaseEnabled && !id.startsWith('local_')) {
+      await db.collection('reported_trees').doc(id).delete();
+    } else {
+      const locals = JSON.parse(localStorage.getItem('reportedTrees') || '[]');
+      localStorage.setItem('reportedTrees', JSON.stringify(locals.filter(r => r.id !== id)));
+    }
+    // 从 myIds 里也移除
+    const myIds = JSON.parse(localStorage.getItem('myReportIds') || '[]');
+    localStorage.setItem('myReportIds', JSON.stringify(myIds.filter(i => i !== id)));
+    alert('已删除');
+    openModal('myReportsModal');
+    await loadMyReports();
+  } catch(e) { alert('删除失败：' + e.message); }
+}
+
+// ==================== 管理员审核功能 ====================
+async function openAdminReview() {
+  openModal('adminReviewModal');
+  const listEl = document.getElementById('adminReviewList');
+  listEl.innerHTML = '<p style="text-align:center;color:#999;font-size:12px;">加载中...</p>';
+
+  if (!firebaseEnabled) {
+    listEl.innerHTML = '<p style="text-align:center;color:#999;font-size:12px;">需要Firebase连接才能在线审核</p>';
+    return;
+  }
+
+  try {
+    const snapshot = await db.collection('reported_trees').orderBy('reportTime', 'desc').get();
+    const all = [];
+    snapshot.forEach(doc => all.push({ id: doc.id, ...doc.data() }));
+
+    if (all.length === 0) {
+      listEl.innerHTML = '<div class="empty-notes"><div class="icon">📋</div><div>暂无上报记录</div></div>';
+      return;
+    }
+
+    const pending = all.filter(r => r.status === 'pending' || !r.status);
+    const others = all.filter(r => r.status && r.status !== 'pending');
+
+    const statusLabel = { pending: '⏳ 待审核', approved: '✅ 已通过', rejected: '❌ 已拒绝' };
+    const statusColor = { pending: '#f39c12', approved: '#27ae60', rejected: '#e74c3c' };
+
+    const renderItem = (r) => `
+      <div style="border:1px solid #e0d6c8;border-radius:8px;padding:12px;margin-bottom:10px;background:#faf8f5;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+          <b style="font-size:13px;color:#5a3d32;">${r.name || '未知树种'}</b>
+          <span style="font-size:10px;font-weight:600;color:${statusColor[r.status]||'#f39c12'};">${statusLabel[r.status]||'⏳ 待审核'}</span>
+        </div>
+        <div style="font-size:11px;color:#888;">📍 经度 ${r.lng?.toFixed(4)} · 纬度 ${r.lat?.toFixed(4)}</div>
+        ${r.address ? `<div style="font-size:11px;color:#888;">${r.address}</div>` : ''}
+        ${r.age ? `<div style="font-size:11px;color:#888;">🌳 树龄：${r.age}</div>` : ''}
+        ${r.note ? `<div style="font-size:11px;color:#888;margin-top:3px;">💬 ${r.note}</div>` : ''}
+        <div style="font-size:10px;color:#aaa;margin:4px 0 8px;">上报于 ${r.reportTime ? new Date(r.reportTime).toLocaleDateString('zh-CN') : '未知'}</div>
+        ${(!r.status || r.status === 'pending') ? `
+          <div style="display:flex;gap:6px;">
+            <button onclick="adminApprove('${r.id}')"
+              style="flex:1;padding:6px;background:#27ae60;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;">
+              ✅ 批准
+            </button>
+            <button onclick="adminViewOnMap(${r.lng}, ${r.lat})"
+              style="flex:1;padding:6px;background:#3498db;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;">
+              🗺 查看位置
+            </button>
+            <button onclick="adminReject('${r.id}')"
+              style="flex:1;padding:6px;background:#e74c3c;color:#fff;border:none;border-radius:4px;font-size:11px;cursor:pointer;">
+              ❌ 拒绝删除
+            </button>
+          </div>` : ''}
+      </div>`;
+
+    listEl.innerHTML = `
+      ${pending.length > 0 ? `<h4 style="color:#f39c12;font-size:12px;margin:0 0 8px;">待审核 (${pending.length})</h4>${pending.map(renderItem).join('')}` : ''}
+      ${others.length > 0 ? `<h4 style="color:#888;font-size:12px;margin:10px 0 8px;">已处理 (${others.length})</h4>${others.map(renderItem).join('')}` : ''}
+    `;
+  } catch(e) { listEl.innerHTML = '<p style="color:red;font-size:12px;">加载失败：' + e.message + '</p>'; }
+}
+
+async function adminApprove(id) {
+  if (!confirm('批准该上报记录？')) return;
+  try {
+    await db.collection('reported_trees').doc(id).update({ status: 'approved', reviewTime: new Date().toISOString() });
+    alert('✅ 已批准');
+    openAdminReview();
+  } catch(e) { alert('操作失败：' + e.message); }
+}
+
+async function adminReject(id) {
+  if (!confirm('拒绝并删除该上报记录？')) return;
+  try {
+    await db.collection('reported_trees').doc(id).delete();
+    alert('已拒绝并删除');
+    openAdminReview();
+  } catch(e) { alert('操作失败：' + e.message); }
+}
+
+function adminViewOnMap(lng, lat) {
+  closeModal('adminReviewModal');
+  closeModal('adminModal');
+  map.setCenter([lng, lat]);
+  map.setZoom(17);
+}
+
 // ==================== 管理员工具 ====================
 async function loadAdminCounts() {
   if (!firebaseEnabled) return;
@@ -1559,6 +1944,13 @@ async function loadAdminCounts() {
     document.getElementById('correctionsCount').textContent = correctionsSnap.size;
     const reportsSnap = await db.collection('reported_trees').get();
     document.getElementById('reportsCount').textContent = reportsSnap.size;
+    // 统计待审核数量
+    let pendingCount = 0;
+    reportsSnap.forEach(doc => {
+      const d = doc.data();
+      if (!d.status || d.status === 'pending') pendingCount++;
+    });
+    document.getElementById('pendingReportsCount').textContent = pendingCount;
     const notesSnap = await db.collection('notes').get();
     document.getElementById('notesCountAdmin').textContent = notesSnap.size;
     const photosSnap = await db.collection('photos').get();
