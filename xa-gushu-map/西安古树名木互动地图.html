@@ -348,7 +348,7 @@
 
 <!-- 上报古树模态框 -->
 <div class="modal-overlay" id="reportModal">
-  <div class="modal">
+  <div class="modal" style="max-width:460px;">
     <div class="modal-header">
       <h3>📍 上报古树发现</h3>
       <button class="modal-close" onclick="closeModal('reportModal')">&times;</button>
@@ -362,18 +362,32 @@
         <label>预估树龄</label>
         <input type="text" id="reportAge" placeholder="如：约300年、100-200年..." />
       </div>
+
       <div class="form-group">
-        <label>定位坐标 *</label>
+        <label>地址搜索定位</label>
         <div class="location-row">
-          <input type="text" id="reportLng" placeholder="经度" readonly />
-          <input type="text" id="reportLat" placeholder="纬度" readonly />
-          <button class="gps-btn" id="getLocationBtn">📍 定位</button>
+          <input type="text" id="reportAddressSearch" placeholder="输入地址或地名，如：小雁塔、钟楼..." />
+          <button class="gps-btn" id="geocodeBtn">🔍 搜索</button>
+        </div>
+        <p style="font-size:9px;color:#aaa;margin-top:2px;">输入后点搜索，地图会自动跳转到该位置</p>
+      </div>
+
+      <div class="form-group">
+        <label>在地图上选点（可拖动标记微调）</label>
+        <div id="reportPickMap" style="height:200px;border-radius:6px;background:#eee;margin-bottom:6px;border:1px solid #d0c4b3;"></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+          <div class="location-row" style="flex:1;">
+            <input type="text" id="reportLng" placeholder="经度" readonly style="background:#f5f5f5;" />
+            <input type="text" id="reportLat" placeholder="纬度" readonly style="background:#f5f5f5;" />
+          </div>
+          <button class="gps-btn" id="getLocationBtn" style="white-space:nowrap;">📍 GPS定位</button>
         </div>
         <p style="font-size:9px;color:#999;margin-top:3px;" id="locationStatus"></p>
       </div>
+
       <div class="form-group">
-        <label>详细地址</label>
-        <input type="text" id="reportAddress" placeholder="具体位置描述" />
+        <label>详细地址备注</label>
+        <input type="text" id="reportAddress" placeholder="补充说明具体位置，如：寺庙院内东侧..." />
       </div>
       <div class="form-group">
         <label>备注说明</label>
@@ -991,30 +1005,125 @@ document.getElementById('notesBtn').addEventListener('click', () => {
 });
 
 // ==================== 上报古树 ====================
-document.getElementById('reportBtn').addEventListener('click', () => openModal('reportModal'));
+// ==================== 上报古树：地图选点 + 地理编码 + GPS ====================
+let reportPickMap = null;
+let reportPickMarker = null;
+
+function initReportPickMap(centerLng, centerLat) {
+  if (reportPickMap) {
+    reportPickMap.setCenter([centerLng, centerLat]);
+    if (reportPickMarker) reportPickMarker.setPosition([centerLng, centerLat]);
+    return;
+  }
+  reportPickMap = new AMap.Map('reportPickMap', {
+    zoom: 15,
+    center: [centerLng, centerLat],
+    mapStyle: 'amap://styles/whitesmoke'
+  });
+
+  // 创建可拖动标记
+  reportPickMarker = new AMap.Marker({
+    position: [centerLng, centerLat],
+    draggable: true,
+    cursor: 'move',
+    title: '拖动我来精确定位'
+  });
+  reportPickMarker.setMap(reportPickMap);
+  setReportCoords(centerLng, centerLat);
+
+  // 拖动结束更新坐标
+  reportPickMarker.on('dragend', function(e) {
+    const pos = reportPickMarker.getPosition();
+    setReportCoords(pos.getLng(), pos.getLat());
+  });
+
+  // 点击地图移动标记
+  reportPickMap.on('click', function(e) {
+    const lng = e.lnglat.getLng();
+    const lat = e.lnglat.getLat();
+    reportPickMarker.setPosition([lng, lat]);
+    setReportCoords(lng, lat);
+  });
+}
+
+function setReportCoords(lng, lat) {
+  document.getElementById('reportLng').value = lng.toFixed(6);
+  document.getElementById('reportLat').value = lat.toFixed(6);
+  document.getElementById('locationStatus').textContent = `✅ 已选点：${lng.toFixed(4)}, ${lat.toFixed(4)}`;
+}
+
+document.getElementById('reportBtn').addEventListener('click', () => {
+  openModal('reportModal');
+  // 延迟初始化地图（等模态框显示后）
+  setTimeout(() => {
+    initReportPickMap(108.95, 34.27);
+  }, 300);
+});
+
+// GPS 定位
 document.getElementById('getLocationBtn').addEventListener('click', function() {
   if (!navigator.geolocation) { document.getElementById('locationStatus').textContent = "浏览器不支持定位"; return; }
   this.disabled = true; this.textContent = "定位中...";
   navigator.geolocation.getCurrentPosition(
     pos => {
-      document.getElementById('reportLng').value = pos.coords.longitude.toFixed(6);
-      document.getElementById('reportLat').value = pos.coords.latitude.toFixed(6);
-      document.getElementById('locationStatus').textContent = `✅ 定位成功`;
-      this.disabled = false; this.textContent = "📍 重新定位";
+      const lng = pos.coords.longitude;
+      const lat = pos.coords.latitude;
+      this.disabled = false; this.textContent = "📍 GPS定位";
+      if (reportPickMap && reportPickMarker) {
+        reportPickMap.setCenter([lng, lat]);
+        reportPickMap.setZoom(17);
+        reportPickMarker.setPosition([lng, lat]);
+      }
+      setReportCoords(lng, lat);
     },
     err => {
       document.getElementById('locationStatus').textContent = `❌ ${err.message}`;
-      this.disabled = false; this.textContent = "📍 定位";
+      this.disabled = false; this.textContent = "📍 GPS定位";
     },
     { enableHighAccuracy: true, timeout: 10000 }
   );
+});
+
+// 地址搜索地理编码
+document.getElementById('geocodeBtn').addEventListener('click', function() {
+  const keyword = document.getElementById('reportAddressSearch').value.trim();
+  if (!keyword) { alert('请输入地址或地名'); return; }
+  this.disabled = true; this.textContent = '搜索中...';
+  const btn = this;
+  AMap.plugin('AMap.Geocoder', () => {
+    const geocoder = new AMap.Geocoder({ city: '西安', radius: 50000 });
+    geocoder.getLocation(keyword, (status, result) => {
+      btn.disabled = false; btn.textContent = '🔍 搜索';
+      if (status === 'complete' && result.geocodes && result.geocodes.length > 0) {
+        const loc = result.geocodes[0].location;
+        const lng = loc.getLng();
+        const lat = loc.getLat();
+        if (reportPickMap && reportPickMarker) {
+          reportPickMap.setCenter([lng, lat]);
+          reportPickMap.setZoom(17);
+          reportPickMarker.setPosition([lng, lat]);
+        } else {
+          initReportPickMap(lng, lat);
+        }
+        setReportCoords(lng, lat);
+        document.getElementById('locationStatus').textContent = `✅ 已定位到：${result.geocodes[0].formattedAddress}`;
+      } else {
+        document.getElementById('locationStatus').textContent = '❌ 未找到该地址，请尝试更具体的描述';
+      }
+    });
+  });
+});
+
+// 支持回车触发搜索
+document.getElementById('reportAddressSearch').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') document.getElementById('geocodeBtn').click();
 });
 document.getElementById('submitReport').addEventListener('click', async () => {
   const name = document.getElementById('reportName').value.trim();
   const lng = document.getElementById('reportLng').value.trim();
   const lat = document.getElementById('reportLat').value.trim();
   if (!name) { alert('请填写树种名称'); return; }
-  if (!lng || !lat) { alert('请先获取定位'); return; }
+  if (!lng || !lat) { alert('请先在地图上选点或使用GPS/地址搜索定位'); return; }
   const tree = {
     name, age: document.getElementById('reportAge').value.trim(),
     lng: parseFloat(lng), lat: parseFloat(lat),
@@ -1039,7 +1148,10 @@ document.getElementById('submitReport').addEventListener('click', async () => {
   marker.on("click", () => showTreeInfo(marker._treeData));
   marker.setMap(map);
   closeModal('reportModal');
-  ['reportName','reportAge','reportLng','reportLat','reportAddress','reportNote'].forEach(id => document.getElementById(id).value = '');
+  ['reportName','reportAge','reportLng','reportLat','reportAddress','reportNote','reportAddressSearch'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('locationStatus').textContent = '';
+  // 销毁地图实例，下次重新创建
+  if (reportPickMap) { reportPickMap.destroy(); reportPickMap = null; reportPickMarker = null; }
 });
 
 // ==================== 筛选功能 ====================
