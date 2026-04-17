@@ -1985,10 +1985,18 @@ if (window.location.search.includes('admin')) {
     }
   }, 500);
 }
-
 document.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.shiftKey && e.key === 'A') { openModal('adminModal'); loadAdminCounts(); }
+  if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+    const pwd = prompt('请输入管理员密码：');
+    if (pwd === '13865456986') {
+      openModal('adminModal');
+      loadAdminCounts();
+    } else if (pwd !== null) {
+      alert('密码错误');
+    }
+  }
 });
+
 </script>
 </body>
 </html>
